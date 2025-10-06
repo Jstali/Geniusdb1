@@ -2,12 +2,14 @@ import React, { useState, useEffect, useMemo } from "react";
 import SidebarFilters from "../components/SidebarFilters";
 import MapSection from "../components/MapSection";
 import SiteDetailsCard from "../components/SiteDetailsCard";
+import { getActiveData, extractMapMarkers } from "../lib/filterUtils";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
-const MapView = ({ activeView = null }) => {
-  // Add activeView prop
+const MapView = ({ activeView = null, selectedColumns = [] }) => {
+  // Add activeView and selectedColumns props
   const [data, setData] = useState([]);
+  const [activeData, setActiveData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
@@ -18,24 +20,155 @@ const MapView = ({ activeView = null }) => {
   });
   const [selectedSite, setSelectedSite] = useState(null);
 
+  console.log("MapView received props:", { activeView, selectedColumns });
+
+  // Compute activeData whenever data or view configuration changes
+  useEffect(() => {
+    if (data.length > 0) {
+      const computedActiveData = getActiveData(data, {
+        selectedColumns: selectedColumns || [],
+        filters: {} // MapView doesn't have complex filters yet
+      });
+      console.log("MapView: Computed activeData", {
+        originalDataLength: data.length,
+        activeDataLength: computedActiveData.length
+      });
+      setActiveData(computedActiveData);
+    }
+  }, [data, selectedColumns]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_BASE}/data/transformers`);
+        // Use different endpoints based on whether we have an active view
+        let endpoint, payload;
+        
+        // Convert frontend filters to backend format
+        const convertFilters = (filters) => {
+          const backendFilters = {};
+          
+          if (filters.siteName && filters.siteName.trim() !== "") {
+            backendFilters.site_name = [{
+              op: "contains",
+              value: filters.siteName.trim()
+            }];
+          }
+          
+          if (filters.voltage && filters.voltage.length > 0) {
+            backendFilters.voltage_level = [{
+              op: "in",
+              value: filters.voltage
+            }];
+          }
+          
+          if (filters.powerRange && (filters.powerRange.min !== undefined || filters.powerRange.max !== undefined)) {
+            const conditions = [];
+            if (filters.powerRange.min !== undefined) {
+              conditions.push({
+                op: ">=",
+                value: filters.powerRange.min
+              });
+            }
+            if (filters.powerRange.max !== undefined) {
+              conditions.push({
+                op: "<=",
+                value: filters.powerRange.max
+              });
+            }
+            backendFilters.available_power = conditions;
+          }
+          
+          if (filters.operators && filters.operators.length > 0) {
+            backendFilters.network_operator = [{
+              op: "in",
+              value: filters.operators
+            }];
+          }
+          
+          return backendFilters;
+        };
+        
+        const backendFilters = convertFilters(filters);
+        
+        if (activeView) {
+          // Use saved view endpoint with selected columns and filters
+          endpoint = `${API_BASE}/api/views/${activeView}/map-data?user_id=1`;
+          payload = {
+            filters: backendFilters,
+            selected_columns: selectedColumns.length > 0 ? selectedColumns : [
+              "site_name", "latitude", "longitude", "voltage_level", 
+              "available_power", "network_operator"
+            ]
+          };
+          console.log("MapView: Using saved view endpoint with selectedColumns:", selectedColumns, "and filters:", backendFilters);
+        } else {
+          // Use home page endpoint with filters
+          endpoint = `${API_BASE}/api/map-data`;
+          payload = {
+            filters: backendFilters,
+            selected_columns: [
+              "site_name", "latitude", "longitude", "voltage_level", 
+              "available_power", "network_operator"
+            ]
+          };
+          console.log("MapView: Using home page endpoint with filters:", backendFilters);
+        }
+        
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
+
         const json = await res.json();
-        if (Array.isArray(json)) {
-          setData(json);
+        console.log("MapView: Received map data", json);
+
+        if (json.rows && Array.isArray(json.rows)) {
+          // Transform the data to match the expected format with proper numeric parsing
+          const transformedData = json.rows
+            .map((row, index) => {
+              const lat = parseFloat(row.latitude);
+              const lng = parseFloat(row.longitude);
+
+              // Only include sites with valid coordinates
+              if (isNaN(lat) || isNaN(lng)) {
+                return null;
+              }
+
+              return {
+                id: index,
+                site_name: row.site_name,
+                "Site Name": row.site_name,
+                latitude: lat,
+                longitude: lng,
+                "Site Voltage": row.voltage_level,
+                site_voltage: row.voltage_level,
+                "Generation Headroom Mw": row.available_power,
+                generation_headroom: row.available_power,
+                "Licence Area": row.network_operator,
+                licence_area: row.network_operator,
+                "Spatial Coordinates": `${lat}, ${lng}`,
+                position: [lat, lng],
+              };
+            })
+            .filter((item) => item !== null); // Remove null items
+
+          console.log("MapView: Transformed data", transformedData);
+          setData(transformedData);
         } else {
           setData([]);
           setError("Unexpected data format from backend");
         }
       } catch (err) {
-        console.error("Error fetching transformer data:", err);
+        console.error("Error fetching map data:", err);
         setError("Failed to fetch site data. Please check backend.");
         setData([]);
       } finally {
@@ -44,7 +177,7 @@ const MapView = ({ activeView = null }) => {
     };
 
     fetchData();
-  }, []);
+  }, [activeView, selectedColumns, filters]);
 
   const summaryStats = useMemo(() => {
     if (!data || data.length === 0) return null;
@@ -87,6 +220,8 @@ const MapView = ({ activeView = null }) => {
 
   const handleMarkerClick = (site) => setSelectedSite(site);
 
+  console.log("MapView rendering with data:", data);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -113,7 +248,7 @@ const MapView = ({ activeView = null }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar - Filters */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4 sidebar-panel">
             <SidebarFilters
               onSiteNameSearch={(name) =>
                 setFilters((f) => ({ ...f, siteName: name }))
@@ -134,19 +269,20 @@ const MapView = ({ activeView = null }) => {
           </div>
 
           {/* Center Map */}
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-4">
             <div className="h-[700px]">
               <MapSection
-                data={data}
+                data={activeData} // Use activeData instead of raw data
                 filters={filters}
                 onMarkerClick={handleMarkerClick}
                 activeView={activeView} // Pass active view to MapSection
+                selectedColumns={selectedColumns} // Pass selected columns to MapSection
               />
             </div>
           </div>
 
           {/* Right Sidebar - Site Details */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4 sidebar-panel">
             <SiteDetailsCard
               selectedSite={selectedSite}
               summaryStats={summaryStats}

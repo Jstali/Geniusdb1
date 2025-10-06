@@ -5,85 +5,16 @@ instead of the production ukpn_opendata database.
 """
 
 import pandas as pd
-import psycopg2
 import os
 from dotenv import load_dotenv
 import re
 from difflib import SequenceMatcher
 import sys
 import shutil
+import json
 
 # Load .env variables
 load_dotenv()
-
-# DB connection - Using QA database instead of production
-# Temporarily using hardcoded values for testing
-# Database connection configuration
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_PORT = os.getenv('DB_PORT', '5432')
-DB_NAME = os.getenv('DB_NAME', 'ukpn_opendata')
-DB_USER = os.getenv('DB_USER', 'postgres')
-DB_PASSWORD = os.getenv('DB_PASSWORD','stali')
-
-try:
-    print("Attempting to connect to database...")
-    print(f"Host: {DB_HOST}")
-    print(f"Port: {DB_PORT}")
-    print(f"Database: {DB_NAME}")
-    print(f"User: {DB_USER}")
-    
-    if not DB_PASSWORD:
-        raise ValueError("DB_PASSWORD environment variable is not set")
-    
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD
-    )
-    print("Database connection successful!")
-except ValueError as ve:
-    print(f"Configuration error: {ve}")
-    print("Please set the DB_PASSWORD environment variable in your .env file")
-    conn = None
-except psycopg2.OperationalError as oe:
-    print(f"Database connection failed - Operational Error: {oe}")
-    print("Possible causes:")
-    print("- Database server is not running")
-    print("- Incorrect host/port configuration")
-    print("- Database does not exist")
-    print("- Network connectivity issues")
-    conn = None
-except psycopg2.Error as pe:
-    print(f"Database connection failed - PostgreSQL Error: {pe}")
-    print("Possible causes:")
-    print("- Invalid credentials")
-    print("- Insufficient permissions")
-    print("- Authentication method mismatch")
-    conn = None
-except Exception as e:
-    print(f"Database connection failed - Unexpected error: {e}")
-    print(f"Error type: {type(e).__name__}")
-    conn = None
-
-# If there is no DB connection, attempt to fallback to an existing CSV in the data dir
-if conn is None:
-    fallback_csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "transformed_transformer_data.csv")
-    if os.path.exists(fallback_csv):
-        print("No DB connection available, but found existing CSV. Copying to working directory and exiting successfully.")
-        try:
-            shutil.copy(fallback_csv, os.path.join(os.path.dirname(os.path.abspath(__file__)), "transformed_transformer_data.csv"))
-            print("Copied fallback CSV to transformed_transformer_data.csv")
-            sys.exit(0)
-        except Exception as e:
-            print(f"Failed to copy fallback CSV: {e}")
-            # Fall through and allow later code to attempt to run (which may fail)
-    else:
-        print("\nERROR: No database connection available and no fallback CSV found.")
-        print("Cannot proceed without database connection or fallback data.")
-        # Exit with non-zero to indicate failure
-        sys.exit(1)
 
 # Configuration
 SPARE_MULTIPLIER = 0.96
@@ -189,24 +120,26 @@ def print_column_tracking_summary():
     
     print("\n" + "="*80)
 
-# Fetch data
-if conn is None:
-    print("\nERROR: No database connection available.")
-    print("Cannot proceed without database connection.")
-    print("Please check your database configuration and try again.")
+# Fetch data directly from CSV file
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+csv_path = os.path.join(DATA_DIR, "transformed_transformer_data.csv")
+
+if not os.path.exists(csv_path):
+    print(f"\nERROR: CSV file not found at {csv_path}")
+    print("Cannot proceed without data file.")
     exit(1)
 
 try:
-    print("Fetching data from grid_and_primary_sites table...")
-    df = pd.read_sql_query("SELECT * FROM grid_and_primary_sites", conn)
-    print(f"Successfully fetched {len(df)} records from database")
+    print(f"Reading data from {csv_path}...")
+    df = pd.read_csv(csv_path)
+    print(f"Successfully read {len(df)} records from CSV file")
 except Exception as e:
-    print(f"Error fetching data from grid_and_primary_sites: {e}")
-    print("Cannot proceed without data from grid_and_primary_sites table.")
+    print(f"Error reading data from CSV: {e}")
+    print("Cannot proceed without data from CSV file.")
     exit(1)
 
-# Track initial database columns
-track_database_columns(df, 'grid_and_primary_sites')
+# Track initial data columns
+track_database_columns(df, 'transformed_transformer_data.csv')
 
 def parse_demand_value(demand_str):
     """Parse demand value - handle both single values and comma-separated values"""
@@ -271,7 +204,7 @@ def calculate_generation_capacity(row, transformer_ratings, season='summer'):
     return 0.0, False
 
 def process_row(row):
-    count = int(row["powertransformercount"])
+    count = int(row.get("powertransformercount", 0))
     
     # Helper function to safely convert to numeric and handle NULL
     def safe_numeric_convert(value_str):
@@ -284,7 +217,7 @@ def process_row(row):
             return None
     
     # Summer - convert all values to numeric with proper NULL handling
-    summer_ratings_raw = str(row["transratingsummer"]).split(",") if not pd.isna(row["transratingsummer"]) else []
+    summer_ratings_raw = str(row.get("transratingsummer", "")).split(",") if not pd.isna(row.get("transratingsummer")) else []
     summer_ratings = [safe_numeric_convert(x.strip()) for x in summer_ratings_raw]
     # Remove None values for calculation but keep track of original positions
     summer_ratings_valid = [x for x in summer_ratings if x is not None]
@@ -315,7 +248,7 @@ def process_row(row):
     gen_capacity_summer, _ = calculate_generation_capacity(row, limited_summer, season='summer')
     
     # Winter - convert all values to numeric with proper NULL handling
-    winter_ratings_raw = str(row["transratingwinter"]).split(",") if not pd.isna(row["transratingwinter"]) else []
+    winter_ratings_raw = str(row.get("transratingwinter", "")).split(",") if not pd.isna(row.get("transratingwinter")) else []
     winter_ratings = [safe_numeric_convert(x.strip()) for x in winter_ratings_raw]
     # Remove None values for calculation but keep track of original positions
     winter_ratings_valid = [x for x in winter_ratings if x is not None]
@@ -398,13 +331,23 @@ output_file = "transformed_transformer_data.csv"
 df_processed.to_csv(output_file, index=False)
 print(f"Data saved to {output_file}")
 
+# DEBUG: Print available columns
+print("Available columns in df_processed:", df_processed.columns.tolist())
+
 site_id = "SPN-S000000008466"   # replace with your sitefunctionallocation
 
-if site_id in df_processed['sitefunctionallocation'].values:
-    print("***********************************************************************************************************************")
-    print(f"{site_id} is present in df_processed")
-    print("***********************************************************************************************************************")
-
+# Check if sitefunctionallocation column exists (normalized name)
+site_col_name = 'Site Functional Location'  # This is the normalized column name
+if site_col_name in df_processed.columns:
+    if site_id in df_processed[site_col_name].values:
+        print("***********************************************************************************************************************")
+        print(f"{site_id} is present in df_processed")
+        print("***********************************************************************************************************************")
+else:
+    print(f"{site_col_name} column not found in df_processed")
+    # Try to find similar column names
+    similar_columns = [col for col in df_processed.columns if 'site' in col.lower() and 'loc' in col.lower()]
+    print(f"Similar columns found: {similar_columns}")
 
 # ============================================================================
 # FILTERING SECTION
@@ -419,8 +362,15 @@ df_filtered = df_processed.copy()
 total_rows = len(df_filtered)
 print(f"Original number of records: {total_rows}")
 
-# Convert powertransformercount to numeric for filtering
-df_filtered['powertransformercount'] = pd.to_numeric(df_filtered['powertransformercount'], errors='coerce')
+# Convert powertransformercount to numeric for filtering (use normalized column name)
+power_transformer_col = 'Power Transformer Count'  # This is the normalized column name
+if power_transformer_col in df_filtered.columns:
+    df_filtered[power_transformer_col] = pd.to_numeric(df_filtered[power_transformer_col], errors='coerce')
+else:
+    print(f"Warning: {power_transformer_col} column not found in df_filtered")
+    # Try to find similar column names
+    similar_columns = [col for col in df_filtered.columns if 'power' in col.lower() and 'trans' in col.lower()]
+    print(f"Similar columns found: {similar_columns}")
 
 # Apply filters step by step:
 
@@ -430,44 +380,59 @@ print(f"   Records remain unchanged: {len(df_filtered)}")
 
 # 2. Filter on powertransformercount - remove blanks or zeros
 print("\n2. Filtering powertransformercount (no blanks/zeros)...")
-transformer_filter = (df_filtered['powertransformercount'].notna()) & (df_filtered['powertransformercount'] > 0)
-df_filtered = df_filtered[transformer_filter]
-transformer_removed = len(df_filtered) - len(df_filtered)
-print(f"   Records after filter: {len(df_filtered)} (removed {transformer_removed})")
+power_transformer_col = 'Power Transformer Count'  # This is the normalized column name
+if power_transformer_col in df_filtered.columns:
+    transformer_filter = (df_filtered[power_transformer_col].notna()) & (df_filtered[power_transformer_col] > 0)
+    df_filtered = df_filtered[transformer_filter]
+    print(f"   Records after filter: {len(df_filtered)}")
+else:
+    print(f"   Warning: {power_transformer_col} column not found, skipping filter")
 
 # 3. Filter on transratingsummer - remove blanks or zeros
 print("\n3. Filtering transratingsummer (no blanks/zeros)...")
-df_filtered['transratingsummer_str'] = df_filtered['transratingsummer'].astype(str)
-summer_filter = ((df_filtered['transratingsummer'].notna()) & 
-                (df_filtered['transratingsummer_str'] != '') & 
-                (df_filtered['transratingsummer_str'] != '0') & 
-                (df_filtered['transratingsummer_str'] != 'nan'))
-df_filtered = df_filtered[summer_filter]
-df_filtered = df_filtered.drop('transratingsummer_str', axis=1)
-print(f"   Records after filter: {len(df_filtered)}")
+trans_rating_summer_col = 'Transformer Rating Summer'  # This is the normalized column name
+if trans_rating_summer_col in df_filtered.columns:
+    df_filtered[trans_rating_summer_col + '_str'] = df_filtered[trans_rating_summer_col].astype(str)
+    summer_filter = ((df_filtered[trans_rating_summer_col].notna()) & 
+                    (df_filtered[trans_rating_summer_col + '_str'] != '') & 
+                    (df_filtered[trans_rating_summer_col + '_str'] != '0') & 
+                    (df_filtered[trans_rating_summer_col + '_str'] != 'nan'))
+    df_filtered = df_filtered[summer_filter]
+    df_filtered = df_filtered.drop(trans_rating_summer_col + '_str', axis=1)
+    print(f"   Records after filter: {len(df_filtered)}")
+else:
+    print(f"   Warning: {trans_rating_summer_col} column not found, skipping filter")
 
 # 4. Filter on transratingwinter - remove blanks or zeros
 print("\n4. Filtering transratingwinter (no blanks/zeros)...")
-df_filtered['transratingwinter_str'] = df_filtered['transratingwinter'].astype(str)
-winter_filter = ((df_filtered['transratingwinter'].notna()) & 
-                (df_filtered['transratingwinter_str'] != '') & 
-                (df_filtered['transratingwinter_str'] != '0') & 
-                (df_filtered['transratingwinter_str'] != 'nan'))
-df_filtered = df_filtered[winter_filter]
-df_filtered = df_filtered.drop('transratingwinter_str', axis=1)
-print(f"   Records after filter: {len(df_filtered)}")
+trans_rating_winter_col = 'Transformer Rating Winter'  # This is the normalized column name
+if trans_rating_winter_col in df_filtered.columns:
+    df_filtered[trans_rating_winter_col + '_str'] = df_filtered[trans_rating_winter_col].astype(str)
+    winter_filter = ((df_filtered[trans_rating_winter_col].notna()) & 
+                    (df_filtered[trans_rating_winter_col + '_str'] != '') & 
+                    (df_filtered[trans_rating_winter_col + '_str'] != '0') & 
+                    (df_filtered[trans_rating_winter_col + '_str'] != 'nan'))
+    df_filtered = df_filtered[winter_filter]
+    df_filtered = df_filtered.drop(trans_rating_winter_col + '_str', axis=1)
+    print(f"   Records after filter: {len(df_filtered)}")
+else:
+    print(f"   Warning: {trans_rating_winter_col} column not found, skipping filter")
 
 # 5. Filter on reversepower - remove blanks and not available/NA
 print("\n5. Filtering reversepower (no blanks/NA)...")
-df_filtered['reversepower_str'] = df_filtered['reversepower'].astype(str)
-reverse_filter = ((df_filtered['reversepower'].notna()) & 
-                 (df_filtered['reversepower_str'] != '') & 
-                 (df_filtered['reversepower_str'] != 'nan') & 
-                 (~df_filtered['reversepower_str'].str.contains('not available', case=False)) & 
-                 (~df_filtered['reversepower_str'].str.contains('NA', case=True)))
-df_filtered = df_filtered[reverse_filter]
-df_filtered = df_filtered.drop('reversepower_str', axis=1)
-print(f"   Records after filter: {len(df_filtered)}")
+reverse_power_col = 'Reverse Power'  # This is the normalized column name
+if reverse_power_col in df_filtered.columns:
+    df_filtered[reverse_power_col + '_str'] = df_filtered[reverse_power_col].astype(str)
+    reverse_filter = ((df_filtered[reverse_power_col].notna()) & 
+                     (df_filtered[reverse_power_col + '_str'] != '') & 
+                     (df_filtered[reverse_power_col + '_str'] != 'nan') & 
+                     (~df_filtered[reverse_power_col + '_str'].str.contains('not available', case=False)) & 
+                     (~df_filtered[reverse_power_col + '_str'].str.contains('NA', case=True)))
+    df_filtered = df_filtered[reverse_filter]
+    df_filtered = df_filtered.drop(reverse_power_col + '_str', axis=1)
+    print(f"   Records after filter: {len(df_filtered)}")
+else:
+    print(f"   Warning: {reverse_power_col} column not found, skipping filter")
 
 # Save filtered data back to the same file
 print(f"\nSaving filtered data back to {output_file}...")
@@ -483,14 +448,19 @@ print(f"Total records removed: {total_rows - len(df_filtered)} ({(total_rows - l
 
 # Show sample of remaining data
 print("\nSample of filtered data (first 5 rows):")
-sample_cols = ['powertransformercount', 'transratingsummer', 'transratingwinter', 'reversepower', 'sitefunctionallocation']
-print(df_filtered[sample_cols].head(5).to_string())
+site_col_name = 'Site Functional Location'  # This is the normalized column name
+sample_cols = [power_transformer_col, trans_rating_summer_col, trans_rating_winter_col, reverse_power_col, site_col_name]
+# Filter to only include columns that exist
+existing_sample_cols = [col for col in sample_cols if col in df_filtered.columns]
+print(df_filtered[existing_sample_cols].head(5).to_string())
 
-if site_id in df_filtered['sitefunctionallocation'].values:
-    print("***********************************************************************************************************************")
-    print(f"{site_id} is present in df_processed")
-    print("***********************************************************************************************************************")
-
+if site_col_name in df_filtered.columns:
+    if site_id in df_filtered[site_col_name].values:
+        print("***********************************************************************************************************************")
+        print(f"{site_id} is present in df_processed")
+        print("***********************************************************************************************************************")
+else:
+    print(f"Warning: {site_col_name} column not found in df_filtered")
 
 # ============================================================================
 # EMBEDDED CAPACITY REGISTER (ECR) DATA INTEGRATION - UPDATED WITH CONNECTION STATUS LOGIC
@@ -544,7 +514,7 @@ try:
         "bulk_supply_point"
     FROM ukpn_embedded_capacity_register
     """
-    df_ecr = pd.read_sql_query(ecr_query, conn)
+    df_ecr = pd.read_sql_query(ecr_query, engine)
     print(f"Successfully fetched {len(df_ecr)} records from ukpn_embedded_capacity_register")
 except Exception as e:
     print(f"Error fetching ECR data: {e}")
@@ -624,8 +594,7 @@ print("="*50)
 # Fetch data from ukpn_embedded_capacity_register_1_under_1mw table WITH Connection Status
 print("Fetching data from ukpn_embedded_capacity_register_1_under_1mw table...")
 try:
-    if conn is not None:
-        ecr_under1mw_query = """
+    ecr_under1mw_query = """
         SELECT 
             "sitefunctionallocation",
             "already_connected_registered_capacity_mw",
@@ -635,13 +604,8 @@ try:
             "bulk_supply_point"
         FROM ukpn_embedded_capacity_register_1_under_1mw
         """
-        df_ecr_under1mw = pd.read_sql_query(ecr_under1mw_query, conn)
-        print(f"Successfully fetched {len(df_ecr_under1mw)} records from ukpn_embedded_capacity_register_1_under_1mw")
-    else:
-        print("\nERROR: No database connection available.")
-        print("Cannot proceed without database connection.")
-        print("Please check your database configuration and try again.")
-        exit(1)
+    df_ecr_under1mw = pd.read_sql_query(ecr_under1mw_query, engine)
+    print(f"Successfully fetched {len(df_ecr_under1mw)} records from ukpn_embedded_capacity_register_1_under_1mw")
 except Exception as e:
     print(f"Error fetching ECR under 1MW data: {e}")
     print("Cannot proceed without data from ukpn_embedded_capacity_register_1_under_1mw table.")
@@ -927,21 +891,15 @@ print("="*50)
 # Fetch data from ltds_table_5_generation table
 print("Fetching data from ltds_table_5_generation table...")
 try:
-    if conn is not None:
-        ltds_query = """
+    ltds_query = """
         SELECT 
             "sitefunctionallocation",
             "installedcapacity_mva"
         FROM ltds_table_5_generation
         WHERE "installedcapacity_mva" IS NOT NULL
         """
-        df_ltds = pd.read_sql_query(ltds_query, conn)
-        print(f"Successfully fetched {len(df_ltds)} records from ltds_table_5_generation")
-    else:
-        print("\nERROR: No database connection available.")
-        print("Cannot proceed without database connection.")
-        print("Please check your database configuration and try again.")
-        exit(1)
+    df_ltds = pd.read_sql_query(ltds_query, engine)
+    print(f"Successfully fetched {len(df_ltds)} records from ltds_table_5_generation")
 except Exception as e:
     print(f"Error fetching LTDS data: {e}")
     print("Cannot proceed without data from ltds_table_5_generation table.")
@@ -1161,8 +1119,7 @@ print("This will preserve all records and add DNOA data where matches are found"
 # Fetch data from ukpn_dnoa table
 print("Fetching data from ukpn_dnoa table...")
 try:
-    if conn is not None:
-        dnoa_query = """
+    dnoa_query = """
         SELECT 
             "functional_location",
             "substation_title",
@@ -1186,13 +1143,8 @@ try:
             "site"
         FROM ukpn_dnoa
         """
-        df_dnoa = pd.read_sql_query(dnoa_query, conn)
-        print(f"Successfully fetched {len(df_dnoa)} records from ukpn_dnoa")
-    else:
-        print("\nERROR: No database connection available.")
-        print("Cannot proceed without database connection.")
-        print("Please check your database configuration and try again.")
-        exit(1)
+    df_dnoa = pd.read_sql_query(dnoa_query, engine)
+    print(f"Successfully fetched {len(df_dnoa)} records from ukpn_dnoa")
 except Exception as e:
     print(f"Error fetching DNOA data: {e}")
     print("Cannot proceed without data from ukpn_dnoa table.")
@@ -1585,7 +1537,7 @@ print("="*50)
 print("Fetching data from ukpn_ltds_infrastructure_projects table...")
 
 # Use SELECT * and rename columns approach since the BOM column name is causing issues
-if conn is None:
+if engine is None:
     print("\nERROR: No database connection available.")
     print("Cannot proceed without database connection.")
     print("Please check your database configuration and try again.")
@@ -1595,7 +1547,7 @@ try:
     ltds_projects_query = """
     SELECT * FROM ukpn_ltds_infrastructure_projects
     """
-    df_ltds_projects = pd.read_sql_query(ltds_projects_query, conn)
+    df_ltds_projects = pd.read_sql_query(ltds_projects_query, engine)
     print(f"Successfully fetched {len(df_ltds_projects)} records from ukpn_ltds_infrastructure_projects")
 except Exception as e:
     print(f"Error fetching LTDS projects data: {e}")
@@ -1799,7 +1751,7 @@ print("="*50)
 
 # Fetch data from ukpn_grid_supply_points_overview table
 print("Fetching data from ukpn_grid_supply_points_overview table...")
-if conn is None:
+if engine is None:
     print("\nERROR: No database connection available.")
     print("Cannot proceed without database connection.")
     print("Please check your database configuration and try again.")
@@ -1819,7 +1771,7 @@ try:
         "technical_limit_export"
     FROM ukpn_grid_supply_points_overview
     """
-    df_gsp_overview = pd.read_sql_query(gsp_overview_query, conn)
+    df_gsp_overview = pd.read_sql_query(gsp_overview_query, engine)
     print(f"Successfully fetched {len(df_gsp_overview)} records from ukpn_grid_supply_points_overview")
 except Exception as e:
     print(f"Error fetching GSP overview data: {e}")
@@ -2181,14 +2133,8 @@ print(f"\nData processing completed. Final data saved to {output_file}")
 print("Grid Supply Points Overview data integration completed successfully!")
 
 # Close connection
-if conn is not None:
-    try:
-        conn.close()
-        print("Database connection closed successfully")
-    except Exception as e:
-        print(f"Error closing database connection: {e}")
-else:
-    print("No database connection to close")
+# Note: SQLAlchemy engine doesn't need explicit closing like psycopg2 connections
+print("Database connection handled by SQLAlchemy engine")
 
 # ============================================================================
 # FINAL COLUMN TRACKING SUMMARY

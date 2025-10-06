@@ -47,7 +47,8 @@ const ViewManager = ({
   const fetchViews = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:8000/api/user/views");
+      const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+      const response = await axios.get(`${API_BASE}/api/user/views`);
       setViews(response.data.views || []);
       setLoading(false);
     } catch (err) {
@@ -65,8 +66,9 @@ const ViewManager = ({
 
     try {
       setLoading(true);
+      const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
       const response = await axios.get(
-        `http://localhost:8000/api/user/views/${selectedSlot}`
+        `${API_BASE}/api/user/views/${selectedSlot}`
       );
 
       if (response.data.error) {
@@ -144,6 +146,7 @@ const ViewManager = ({
       setError("");
       setSuccess("");
 
+      const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
       // Prepare view data as query parameters
       const params = new URLSearchParams({
         name: viewName,
@@ -154,7 +157,7 @@ const ViewManager = ({
       });
 
       const response = await axios.post(
-        `http://localhost:8000/api/user/views/${selectedSlot}?${params.toString()}`
+        `${API_BASE}/api/user/views/${selectedSlot}?${params.toString()}`
       );
 
       if (response.data.error) {
@@ -338,7 +341,7 @@ const ViewManager = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
@@ -410,7 +413,7 @@ const ViewManager = ({
                       value={viewName}
                       onChange={(e) => setViewName(e.target.value)}
                       placeholder={`View ${selectedSlot}`}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                       disabled={loading}
                     />
                   </div>
@@ -463,7 +466,7 @@ const ViewManager = ({
                               }
                               className="mr-2"
                             />
-                            <span className="text-sm">
+                            <span className="text-sm text-gray-900">
                               {typeof column === "object"
                                 ? `${column.column_name} (${column.original_name})`
                                 : column}
@@ -501,7 +504,7 @@ const ViewManager = ({
                             onChange={(e) =>
                               handleChartConfigChange("type", e.target.value)
                             }
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                           >
                             <option key="chart-bar" value="bar">
                               Bar
@@ -526,7 +529,7 @@ const ViewManager = ({
                             onChange={(e) =>
                               handleChartConfigChange("xAxis", e.target.value)
                             }
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                           >
                             <option value="">Select column</option>
                             {selectedColumns.map((column) => (
@@ -558,7 +561,7 @@ const ViewManager = ({
                             onChange={(e) =>
                               handleChartConfigChange("yAxis", e.target.value)
                             }
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                           >
                             <option value="">Select column</option>
                             {selectedColumns.map((column) => (
@@ -597,7 +600,7 @@ const ViewManager = ({
                           className="mb-3 last:mb-0"
                         >
                           <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium text-gray-900">
                               {typeof column === "object"
                                 ? `${column.column_name} (${column.original_name})`
                                 : column}

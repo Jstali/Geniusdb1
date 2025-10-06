@@ -1,5 +1,5 @@
 import React from "react";
-import LeafletMap from "./LeafletMap";
+import GoogleMapComponent from "./GoogleMapComponent";
 
 const MapView = () => {
   return (
@@ -15,7 +15,9 @@ const MapView = () => {
         </p>
       </div>
       <div className="mt-4">
-        <LeafletMap />
+        <div className="w-full h-[600px]">
+          <GoogleMapComponent />
+        </div>
       </div>
     </div>
   );

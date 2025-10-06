@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, Body
+from fastapi import FastAPI, Query, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import json
@@ -8,6 +8,9 @@ import sys
 import sqlite3
 from typing import Optional, List
 from pydantic import BaseModel
+
+# Import our data manager
+from data_manager import get_data
 
 app = FastAPI(title="Genius DB API")
 
@@ -26,11 +29,21 @@ class ViewData(BaseModel):
     selected_columns: str
     chart_config: str = ""
     filters: str = ""
+    map_config: str = ""
+    sort_config: str = ""
+    pagination_config: str = ""
 
 # Pydantic model for new view management
 class NewViewData(BaseModel):
     user_id: int
     selected_columns: List[str]
+
+# Pydantic model for chart data requests
+class ChartDataRequest(BaseModel):
+    x_axis: str
+    y_axis: Optional[str] = None
+    filters: Optional[dict] = {}
+    chart_type: Optional[str] = "bar"
 
 # Pydantic model for view data response
 class ViewDataResponse(BaseModel):
@@ -41,6 +54,57 @@ class ViewDataResponse(BaseModel):
 
 # Load data files
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+# Initialize database with enhanced schema
+def init_database():
+    """Initialize the user_views database with enhanced schema"""
+    try:
+        conn = sqlite3.connect("user_views.db")
+        cursor = conn.cursor()
+        
+        # Create user_views table with enhanced schema
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_views (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                slot INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                selected_columns TEXT NOT NULL,
+                chart_config TEXT DEFAULT '',
+                filters TEXT DEFAULT '',
+                map_config TEXT DEFAULT '',
+                sort_config TEXT DEFAULT '',
+                pagination_config TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, slot)
+            )
+        """)
+        
+        # Add new columns if they don't exist (for existing databases)
+        try:
+            cursor.execute("ALTER TABLE user_views ADD COLUMN map_config TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+            
+        try:
+            cursor.execute("ALTER TABLE user_views ADD COLUMN sort_config TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+            
+        try:
+            cursor.execute("ALTER TABLE user_views ADD COLUMN pagination_config TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
+        conn.commit()
+        conn.close()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+
+# Initialize database on startup
+init_database()
 
 @app.get("/")
 def read_root():
@@ -80,8 +144,10 @@ def get_calculated_data():
 @app.get("/data/map")
 def get_map_data():
     try:
-        # Read the CSV file
-        df = pd.read_csv(os.path.join(DATA_DIR, "transformed_transformer_data.csv"))
+        # Use the processed data instead of reading CSV
+        df = get_data()
+        if df is None or df.empty:
+            raise HTTPException(status_code=500, detail="No data available")
         
         # Extract map data with coordinates
         map_data = []
@@ -159,14 +225,16 @@ def get_map_data():
                 
         return map_data
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=f"Error processing map data: {str(e)}")
 
 @app.get("/data/transformers")
 def get_transformer_data():
     try:
-        # Read the CSV file
-        df = pd.read_csv(os.path.join(DATA_DIR, "transformed_transformer_data.csv"))
-        
+        # Use the processed data instead of reading CSV
+        df = get_data()
+        if df is None or df.empty:
+            raise HTTPException(status_code=500, detail="No data available")
+            
         # Comprehensive NaN and infinite value handling
         # Replace infinite values with None
         df = df.replace([float('inf'), float('-inf')], None)
@@ -193,28 +261,139 @@ def get_transformer_data():
         
         return transformer_data
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error in get_transformer_data: {str(e)}")
+        print(f"Error details: {error_details}")
+        raise HTTPException(status_code=500, detail=f"Error processing transformer data: {str(e)}")
 
 @app.get("/process/transformers")
 def process_transformer_data():
     try:
-        # Run the grid_and_primary_calculated.py script
-        # Get the directory of the current script
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        script_path = os.path.join(current_dir, "grid_and_primary_calculated.py")
-        
-        # Run the script
-        result = subprocess.run([sys.executable, script_path], 
-                              cwd=current_dir, capture_output=True, text=True, timeout=300)  # 5 minute timeout
-        
-        if result.returncode == 0:
-            return {"status": "success", "message": "Data processed successfully"}
-        else:
-            return {"status": "error", "message": f"Script failed with return code {result.returncode}: {result.stderr}"}
-    except subprocess.TimeoutExpired:
-        return {"status": "error", "message": "Script execution timed out after 5 minutes"}
+        # Instead of running the database script, we'll just return success
+        # since we're reading directly from the CSV file
+        return {"status": "success", "message": "Data is already available from CSV file"}
     except Exception as e:
-        return {"status": "error", "message": f"Failed to execute script: {str(e)}"}
+        return {"status": "error", "message": f"Failed to process data: {str(e)}"}
+
+@app.post("/api/chart-data")
+def get_chart_data(request: ChartDataRequest):
+    """Get chart data with filtering and axis selection"""
+    try:
+        print(f"=== Chart Data Request ===")
+        print(f"x_axis: {request.x_axis}")
+        print(f"y_axis: {request.y_axis}")
+        print(f"chart_type: {request.chart_type}")
+        print(f"filters: {request.filters}")
+        
+        # Validate required parameters
+        if not request.x_axis:
+            return {"error": "x_axis is required"}, 400
+            
+        if request.chart_type != "pie" and not request.y_axis:
+            return {"error": "y_axis is required for non-pie charts"}, 400
+        
+        # Use the processed data instead of reading CSV
+        df = get_data()
+        if df is None or df.empty:
+            return {"error": "No data available"}, 500
+            
+        print(f"Loaded data with {len(df)} rows and {len(df.columns)} columns")
+        print(f"Available columns: {list(df.columns)}")
+        
+        # Check if requested columns exist
+        if request.x_axis not in df.columns:
+            return {"error": f"Column '{request.x_axis}' not found in data"}, 400
+            
+        if request.y_axis and request.y_axis not in df.columns:
+            return {"error": f"Column '{request.y_axis}' not found in data"}, 400
+        
+        # Apply filters if provided
+        if request.filters:
+            print(f"Applying filters: {request.filters}")
+            for column, filter_conditions in request.filters.items():
+                if column in df.columns and filter_conditions:
+                    for condition in filter_conditions:
+                        operator = condition.get("op") or condition.get("operator")
+                        value = condition.get("value")
+                        
+                        if operator and value is not None:
+                            try:
+                                print(f"Applying filter: {column} {operator} {value}")
+                                
+                                # Apply filter based on operator
+                                if operator == "=":
+                                    df = df[df[column] == value]
+                                elif operator == "!=":
+                                    df = df[df[column] != value]
+                                elif operator == ">":
+                                    # Convert to numeric for comparison
+                                    df[column] = pd.to_numeric(df[column], errors='coerce')
+                                    df = df[df[column] > float(value)]
+                                elif operator == "<":
+                                    # Convert to numeric for comparison
+                                    df[column] = pd.to_numeric(df[column], errors='coerce')
+                                    df = df[df[column] < float(value)]
+                                elif operator == ">=":
+                                    # Convert to numeric for comparison
+                                    df[column] = pd.to_numeric(df[column], errors='coerce')
+                                    df = df[df[column] >= float(value)]
+                                elif operator == "<=":
+                                    # Convert to numeric for comparison
+                                    df[column] = pd.to_numeric(df[column], errors='coerce')
+                                    df = df[df[column] <= float(value)]
+                                elif operator == "contains":
+                                    df = df[df[column].astype(str).str.contains(str(value), case=False, na=False)]
+                                elif operator == "in":
+                                    # Handle list values for "in" operator
+                                    if isinstance(value, list):
+                                        df = df[df[column].isin(value)]
+                                    elif isinstance(value, str):
+                                        # Handle comma-separated values
+                                        values = [v.strip() for v in value.split(",")]
+                                        df = df[df[column].isin(values)]
+                                
+                                print(f"Filtered data now has {len(df)} rows")
+                            except Exception as e:
+                                print(f"Error applying filter for column {column}: {e}")
+                                continue
+        
+        # Select only the required columns
+        required_columns = [request.x_axis]
+        if request.y_axis:
+            required_columns.append(request.y_axis)
+            
+        filtered_df = df[required_columns]
+        
+        # Handle NaN and infinite values to make them JSON compliant
+        filtered_df = filtered_df.replace([float('inf'), float('-inf')], None)
+        filtered_df = filtered_df.where(pd.notna(filtered_df), None)
+        
+        # Convert DataFrame to list of dictionaries
+        chart_data = filtered_df.to_dict('records')
+        
+        # Additional cleaning of the records to ensure JSON compliance
+        for record in chart_data:
+            for key, value in record.items():
+                if isinstance(value, float) and pd.isna(value):
+                    record[key] = None
+        
+        print(f"Returning {len(chart_data)} records for chart")
+        
+        return {
+            "data": chart_data,
+            "count": len(chart_data),
+            "x_axis": request.x_axis,
+            "y_axis": request.y_axis,
+            "chart_type": request.chart_type
+        }
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error in get_chart_data: {str(e)}")
+        print(f"Error details: {error_details}")
+        return {"error": f"Failed to get chart data: {str(e)}"}, 500
 
 @app.get("/api/user/views")
 def get_user_views(user_id: int = Query(1)):
@@ -225,7 +404,8 @@ def get_user_views(user_id: int = Query(1)):
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT id, slot, name, selected_columns, chart_config, filters, created_at, updated_at 
+            SELECT id, slot, name, selected_columns, chart_config, filters, 
+                   map_config, sort_config, pagination_config, created_at, updated_at 
             FROM user_views 
             WHERE user_id = ? 
             ORDER BY slot
@@ -243,6 +423,9 @@ def get_user_views(user_id: int = Query(1)):
                 "selected_columns": view["selected_columns"],  # Keep as CSV string
                 "chart_config": view["chart_config"],  # Keep as string
                 "filters": view["filters"],  # Keep as JSON string
+                "map_config": view["map_config"],  # Keep as JSON string
+                "sort_config": view["sort_config"],  # Keep as JSON string
+                "pagination_config": view["pagination_config"],  # Keep as JSON string
                 "updated_at": view["updated_at"]
             })
         
@@ -263,7 +446,8 @@ def get_user_view(slot: int, user_id: int = Query(1)):
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT id, slot, name, selected_columns, chart_config, filters, created_at, updated_at 
+            SELECT id, slot, name, selected_columns, chart_config, filters, 
+                   map_config, sort_config, pagination_config, created_at, updated_at 
             FROM user_views 
             WHERE user_id = ? AND slot = ?
         """, (user_id, slot))
@@ -281,6 +465,9 @@ def get_user_view(slot: int, user_id: int = Query(1)):
             "selected_columns": view["selected_columns"],  # Keep as CSV string
             "chart_config": view["chart_config"],  # Keep as string
             "filters": view["filters"],  # Keep as JSON string
+            "map_config": view["map_config"],  # Keep as JSON string
+            "sort_config": view["sort_config"],  # Keep as JSON string
+            "pagination_config": view["pagination_config"],  # Keep as JSON string
             "updated_at": view["updated_at"]
         }
         
@@ -339,15 +526,19 @@ def save_user_view(
             # Update existing view
             cursor.execute("""
                 UPDATE user_views 
-                SET name = ?, selected_columns = ?, chart_config = ?, filters = ?, updated_at = CURRENT_TIMESTAMP
+                SET name = ?, selected_columns = ?, chart_config = ?, filters = ?, 
+                    map_config = ?, sort_config = ?, pagination_config = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ? AND slot = ?
-            """, (view_data.name, view_data.selected_columns, view_data.chart_config, view_data.filters, user_id, slot))
+            """, (view_data.name, view_data.selected_columns, view_data.chart_config, view_data.filters, 
+                  view_data.map_config, view_data.sort_config, view_data.pagination_config, user_id, slot))
         else:
             # Insert new view
             cursor.execute("""
-                INSERT INTO user_views (user_id, slot, name, selected_columns, chart_config, filters)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (user_id, slot, view_data.name, view_data.selected_columns, view_data.chart_config, view_data.filters))
+                INSERT INTO user_views (user_id, slot, name, selected_columns, chart_config, filters, 
+                                      map_config, sort_config, pagination_config)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (user_id, slot, view_data.name, view_data.selected_columns, view_data.chart_config, view_data.filters,
+                  view_data.map_config, view_data.sort_config, view_data.pagination_config))
         
         conn.commit()
         conn.close()
@@ -358,6 +549,9 @@ def save_user_view(
             "selected_columns": view_data.selected_columns,
             "chart_config": view_data.chart_config,
             "filters": view_data.filters,
+            "map_config": view_data.map_config,
+            "sort_config": view_data.sort_config,
+            "pagination_config": view_data.pagination_config,
             "updated_at": "2025-09-30T12:34:56Z"  # Placeholder for actual timestamp
         }
     except Exception as e:
@@ -483,8 +677,10 @@ def load_view_data(view_name: str, user_id: int = Query(...)):
         if not validated_columns:
             return {"error": "No valid columns found in view"}, 400
             
-        # Read the CSV file
-        df = pd.read_csv(os.path.join(DATA_DIR, "transformed_transformer_data.csv"))
+        # Use the processed data instead of reading CSV
+        df = get_data()
+        if df is None or df.empty:
+            raise HTTPException(status_code=500, detail="No data available")
         
         # Filter DataFrame to only include selected columns
         filtered_df = df[validated_columns]
@@ -565,8 +761,10 @@ def get_map_view(view_name: str, user_id: int = Query(...)):
             # If no location column is selected, return empty markers
             return {"markers": []}
             
-        # Read the CSV file
-        df = pd.read_csv(os.path.join(DATA_DIR, "transformed_transformer_data.csv"))
+        # Use the processed data instead of reading CSV
+        df = get_data()
+        if df is None or df.empty:
+            return {"markers": []}
         
         # Filter DataFrame to only include selected columns
         filtered_df = df[validated_columns]
@@ -651,6 +849,8 @@ def get_filtered_map_data(view_name: str, request_data: dict = Body(default={}))
         ])
         
         print(f"get_filtered_map_data called with view_name: {view_name}, filters: {filters}, selected_columns: {selected_columns}")
+        print(f"Number of selected columns: {len(selected_columns)}")
+        print(f"Selected columns details: {selected_columns}")
         
         # Validate that view_name is one of the allowed values (View 1-5)
         allowed_view_names = ["View 1", "View 2", "View 3", "View 4", "View 5"]
@@ -658,9 +858,16 @@ def get_filtered_map_data(view_name: str, request_data: dict = Body(default={}))
             print(f"Invalid view name: {view_name}")
             return {"error": "View name must be one of: View 1, View 2, View 3, View 4, View 5"}, 400
             
-        # Read the CSV file
-        df = pd.read_csv(os.path.join(DATA_DIR, "transformed_transformer_data.csv"))
-        print(f"Loaded CSV with {len(df)} rows")
+        # Use the processed data instead of reading CSV
+        df = get_data()
+        if df is None or df.empty:
+            print("No data available")
+            return {
+                "count": 0,
+                "rows": []
+            }
+        print(f"Loaded data with {len(df)} rows")
+        print(f"Available columns in CSV: {list(df.columns)}")
         
         # Apply filters if provided
         if filters:
@@ -753,32 +960,105 @@ def get_filtered_map_data(view_name: str, request_data: dict = Body(default={}))
                     
                     # Map and add other selected columns
                     column_mapping = {
+                        # Frontend column names (from original_name in JSON)
                         "site_name": "Site Name",
-                        "voltage_level": "Site Voltage",
+                        "voltage_level": "Site Voltage", 
                         "available_power": "Generation Headroom Mw",
-                        "network_operator": "Licence Area"
+                        "network_operator": "Licence Area",
+                        "spatial_coordinates": "Spatial Coordinates",
+                        "site_type": "Site Type",
+                        "county": "County",
+                        "postcode": "Postcode",
+                        "local_authority": "Local Authority",
+                        "max_demand_summer": "Max Demand Summer",
+                        "max_demand_winter": "Max Demand Winter",
+                        "installed_capacity": "Installed Capacity MVA",
+                        "power_transformer_count": "Power Transformer Count",
+                        "assessment_date": "Assessment Date",
+                        "date_commissioned": "Date Commissioned",
+                        "licence_area": "Licence Area",
+                        "site_voltage": "Site Voltage",
+                        "generation_headroom_mw": "Generation Headroom Mw",
+                        "site_classification": "Site Classification",
+                        "site_functional_location": "Site Functional Location",
+                        "what3words": "What3Words",
+                        # Direct CSV column names (for exact matches)
+                        "Site Name": "Site Name",
+                        "Site Voltage": "Site Voltage",
+                        "Generation Headroom Mw": "Generation Headroom Mw",
+                        "Licence Area": "Licence Area",
+                        "Spatial Coordinates": "Spatial Coordinates",
+                        "Site Type": "Site Type",
+                        "County": "County",
+                        "Postcode": "Postcode",
+                        "Local Authority": "Local Authority",
+                        "Max Demand Summer": "Max Demand Summer",
+                        "Max Demand Winter": "Max Demand Winter",
+                        "Installed Capacity MVA": "Installed Capacity MVA",
+                        "Power Transformer Count": "Power Transformer Count",
+                        "Assessment Date": "Assessment Date",
+                        "Date Commissioned": "Date Commissioned",
+                        "Site Classification": "Site Classification",
+                        "Site Functional Location": "Site Functional Location",
+                        "What3Words": "What3Words",
+                        # Special handling for coordinates
+                        "latitude": "Spatial Coordinates",  # Map to actual CSV column
+                        "longitude": "Spatial Coordinates",  # Map to actual CSV column
                     }
                     
+                    # Check if this row has data for the selected columns
+                    has_required_data = True
                     for frontend_col in selected_columns:
                         if frontend_col == "latitude" or frontend_col == "longitude":
-                            # Already added above
+                            # These are extracted from Spatial Coordinates, so they're always available if we have coordinates
                             continue
                         elif frontend_col in column_mapping:
                             csv_col = column_mapping[frontend_col]
-                            if csv_col in row:
+                            if csv_col in row and not pd.isna(row[csv_col]) and row[csv_col] != '':
                                 result_row[frontend_col] = row[csv_col]
+                            else:
+                                has_required_data = False
+                                break
                         else:
-                            # For any other columns, try to find a match
-                            csv_col = frontend_col.replace("_", " ").title()
-                            if csv_col in row:
-                                result_row[frontend_col] = row[csv_col]
+                            # For any other columns, try multiple strategies to find a match
+                            possible_matches = [
+                                frontend_col,  # Try exact match first
+                                frontend_col.replace("_", " ").title(),  # Replace underscores and title case
+                                frontend_col.replace("_", " "),  # Just replace underscores
+                                frontend_col.title(),  # Just title case
+                                frontend_col.lower(),  # Lowercase
+                                frontend_col.upper(),  # Uppercase
+                            ]
+                            
+                            found_match = False
+                            for csv_col in possible_matches:
+                                if csv_col in row and not pd.isna(row[csv_col]) and row[csv_col] != '':
+                                    result_row[frontend_col] = row[csv_col]
+                                    found_match = True
+                                    break
+                            
+                            if not found_match:
+                                has_required_data = False
+                                break
                     
-                    rows.append(result_row)
+                    # Only add this row if it has data for all selected columns
+                    if has_required_data:
+                        rows.append(result_row)
             except (ValueError, IndexError):
                 # Skip rows with invalid coordinates
                 continue
                 
         print(f"Created {len(rows)} rows")
+        print(f"Filtering stats: Started with {len(df)} rows, filtered to {len(rows)} rows")
+        print(f"Selected columns used for filtering: {selected_columns}")
+        if len(rows) > 0:
+            print(f"Sample filtered row: {rows[0]}")
+        else:
+            print("WARNING: No rows passed the filtering criteria!")
+            print("This might be due to:")
+            print("1. Selected columns not matching CSV column names")
+            print("2. Rows missing data for required columns")
+            print("3. Invalid coordinate data")
         print("=== DEBUG: Returning new format ===")
         return {
             "count": len(rows),
@@ -799,13 +1079,35 @@ def get_homepage_map_data(request_data: dict = Body(default={})):
     print(f"request_data: {request_data}")
     
     try:
-        # Extract filters from request data
+        # Extract filters and selected_columns from request data
         filters = request_data.get("filters", {})
+        selected_columns = request_data.get("selected_columns", [
+            "site_name", "latitude", "longitude", "voltage_level", 
+            "available_power", "network_operator"
+        ])
         print(f"Applying filters: {filters}")
+        print(f"Selected columns: {selected_columns}")
         
-        # Read the CSV file
-        df = pd.read_csv(os.path.join(DATA_DIR, "transformed_transformer_data.csv"))
-        print(f"Loaded CSV with {len(df)} rows")
+        # Check if location-related columns are included
+        location_columns = ["latitude", "longitude", "Spatial Coordinates"]
+        has_location = any(col in selected_columns for col in location_columns)
+        
+        if not has_location:
+            print("No location columns in selected_columns, returning empty result")
+            return {
+                "rows": [],
+                "count": 0
+            }
+        
+        # Use the processed data instead of reading CSV
+        df = get_data()
+        if df is None or df.empty:
+            print("No data available")
+            return {
+                "rows": [],
+                "count": 0
+            }
+        print(f"Loaded data with {len(df)} rows")
         
         # Build SQL-like query dynamically with WHERE clauses
         # In this case, we're using pandas filtering which is equivalent
@@ -857,17 +1159,99 @@ def get_homepage_map_data(request_data: dict = Body(default={})):
                     if pd.isna(lat) or pd.isna(lng):
                         continue
                     
-                    # Create row with required fields
-                    result_row = {
-                        "site_name": row.get("Site Name", ""),
-                        "latitude": lat,
-                        "longitude": lng,
-                        "voltage_level": row.get("Site Voltage", ""),
-                        "available_power": row.get("Generation Headroom Mw", None),
-                        "network_operator": row.get("Licence Area", "")
+                    # Create row with selected columns
+                    result_row = {}
+                    
+                    # Add coordinates
+                    result_row["latitude"] = lat
+                    result_row["longitude"] = lng
+                    
+                    # Map and add other selected columns
+                    column_mapping = {
+                        # Frontend column names (from original_name in JSON)
+                        "site_name": "Site Name",
+                        "voltage_level": "Site Voltage", 
+                        "available_power": "Generation Headroom Mw",
+                        "network_operator": "Licence Area",
+                        "spatial_coordinates": "Spatial Coordinates",
+                        "site_type": "Site Type",
+                        "county": "County",
+                        "postcode": "Postcode",
+                        "local_authority": "Local Authority",
+                        "max_demand_summer": "Max Demand Summer",
+                        "max_demand_winter": "Max Demand Winter",
+                        "installed_capacity": "Installed Capacity MVA",
+                        "power_transformer_count": "Power Transformer Count",
+                        "assessment_date": "Assessment Date",
+                        "date_commissioned": "Date Commissioned",
+                        "licence_area": "Licence Area",
+                        "site_voltage": "Site Voltage",
+                        "generation_headroom_mw": "Generation Headroom Mw",
+                        "site_classification": "Site Classification",
+                        "site_functional_location": "Site Functional Location",
+                        "what3words": "What3Words",
+                        # Direct CSV column names (for exact matches)
+                        "Site Name": "Site Name",
+                        "Site Voltage": "Site Voltage",
+                        "Generation Headroom Mw": "Generation Headroom Mw",
+                        "Licence Area": "Licence Area",
+                        "Spatial Coordinates": "Spatial Coordinates",
+                        "Site Type": "Site Type",
+                        "County": "County",
+                        "Postcode": "Postcode",
+                        "Local Authority": "Local Authority",
+                        "Max Demand Summer": "Max Demand Summer",
+                        "Max Demand Winter": "Max Demand Winter",
+                        "Installed Capacity MVA": "Installed Capacity MVA",
+                        "Power Transformer Count": "Power Transformer Count",
+                        "Assessment Date": "Assessment Date",
+                        "Date Commissioned": "Date Commissioned",
+                        "Site Classification": "Site Classification",
+                        "Site Functional Location": "Site Functional Location",
+                        "What3Words": "What3Words",
+                        # Special handling for coordinates
+                        "latitude": "Spatial Coordinates",  # Map to actual CSV column
+                        "longitude": "Spatial Coordinates",  # Map to actual CSV column
                     }
                     
-                    rows.append(result_row)
+                    # Check if this row has data for the selected columns
+                    has_required_data = True
+                    for frontend_col in selected_columns:
+                        if frontend_col == "latitude" or frontend_col == "longitude":
+                            # These are extracted from Spatial Coordinates, so they're always available if we have coordinates
+                            continue
+                        elif frontend_col in column_mapping:
+                            csv_col = column_mapping[frontend_col]
+                            if csv_col in row and not pd.isna(row[csv_col]) and row[csv_col] != '':
+                                result_row[frontend_col] = row[csv_col]
+                            else:
+                                has_required_data = False
+                                break
+                        else:
+                            # For any other columns, try multiple strategies to find a match
+                            possible_matches = [
+                                frontend_col,  # Try exact match first
+                                frontend_col.replace("_", " ").title(),  # Replace underscores and title case
+                                frontend_col.replace("_", " "),  # Just replace underscores
+                                frontend_col.title(),  # Just title case
+                                frontend_col.lower(),  # Lowercase
+                                frontend_col.upper(),  # Uppercase
+                            ]
+                            
+                            found_match = False
+                            for csv_col in possible_matches:
+                                if csv_col in row and not pd.isna(row[csv_col]) and row[csv_col] != '':
+                                    result_row[frontend_col] = row[csv_col]
+                                    found_match = True
+                                    break
+                            
+                            if not found_match:
+                                has_required_data = False
+                                break
+                    
+                    # Only add this row if it has data for all selected columns
+                    if has_required_data:
+                        rows.append(result_row)
             except (ValueError, IndexError):
                 # Skip rows with invalid coordinates
                 continue
@@ -888,11 +1272,21 @@ def get_homepage_map_data(request_data: dict = Body(default={})):
 def get_allowed_columns():
     """Get list of allowed columns to prevent SQL injection"""
     try:
-        # Read the CSV file to get actual column names
-        df = pd.read_csv(os.path.join(DATA_DIR, "transformed_transformer_data.csv"))
-        return list(df.columns)
+        # Use the processed data to get actual column names
+        df = get_data()
+        if df is not None and not df.empty:
+            return list(df.columns)
+        else:
+            # Fallback to a predefined list if data is not available
+            return [
+                "Site Name", "Site Type", "Site Voltage", "County", "Licence Area",
+                "Bulk Supply Point", "Constraint description", "Constraint Occurrence Year",
+                "Generation Headroom Mw", "ECR MW", "Total ECR MW", "Primary Voltage (Kv)",
+                "Primary Rating (MVA)", "Primary X (Ohm)", "Primary Y (Ohm)", "Primary Z (Ohm)",
+                "Primary R (Ohm)", "Spatial Coordinates"
+            ]
     except Exception:
-        # Fallback to a predefined list if CSV reading fails
+        # Fallback to a predefined list if data reading fails
         return [
             "Site Name", "Site Type", "Site Voltage", "County", "Licence Area",
             "Bulk Supply Point", "Constraint description", "Constraint Occurrence Year",

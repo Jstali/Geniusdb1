@@ -2,12 +2,41 @@ import { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 
 const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
+  // Get column options for dropdowns
+  const columnOptions = useMemo(() => {
+    if (!columns || columns.length === 0) return [];
+    return columns.map((col) => ({
+      value: col.accessorKey,
+      label: col.header,
+    }));
+  }, [columns]);
+
+  // Initialize state with empty arrays - will be populated by useEffect
   const [rows, setRows] = useState([]);
   const [columnsFields, setColumnsFields] = useState([]);
   const [values, setValues] = useState([]);
   const [aggregations, setAggregations] = useState([]);
+
+  // Initialize state with default values based on available columns
+  const getDefaultState = () => {
+    if (columnOptions.length === 0) {
+      return {
+        rows: [],
+        columnsFields: [],
+        values: [],
+        aggregations: []
+      };
+    }
+    
+    return {
+      rows: columnOptions.length > 0 ? [columnOptions[0].value] : [],
+      columnsFields: columnOptions.length > 1 ? [columnOptions[1].value] : [],
+      values: columnOptions.length > 2 ? [columnOptions[2].value] : [],
+      aggregations: columnOptions.length > 2 ? ["SUM"] : []
+    };
+  };
   const [error, setError] = useState("");
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Available aggregation functions
   const aggregationOptions = useMemo(
@@ -15,30 +44,17 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
     []
   );
 
-  // Initialize with first column as row, second as column, third as value
-  // Only initialize once, not on every render
+  // Only initialize state once when component mounts and columns are available
   useEffect(() => {
-    console.log("=== PIVOT CONFIG PANEL INITIALIZATION ===");
-    console.log("Initializing PivotConfigPanel with columns:", columns);
-    if (!isInitialized && columns && columns.length > 0) {
-      const columnKeys = columns.map((col) => col.accessorKey);
-      console.log("Available column keys:", columnKeys);
-      if (columnKeys.length > 0) {
-        setRows([columnKeys[0]]);
-        console.log("Initialized rows with:", columnKeys[0]);
-      }
-      if (columnKeys.length > 1) {
-        setColumnsFields([columnKeys[1]]);
-        console.log("Initialized columns with:", columnKeys[1]);
-      }
-      if (columnKeys.length > 2) {
-        setValues([columnKeys[2]]);
-        setAggregations([aggregationOptions[0]]);
-        console.log("Initialized values with:", columnKeys[2]);
-      }
-      setIsInitialized(true);
+    if (columnOptions.length > 0 && rows.length === 0 && columnsFields.length === 0 && values.length === 0) {
+      console.log("Initializing pivot form with default values");
+      const defaultState = getDefaultState();
+      setRows(defaultState.rows);
+      setColumnsFields(defaultState.columnsFields);
+      setValues(defaultState.values);
+      setAggregations(defaultState.aggregations);
     }
-  }, [columns, isInitialized, aggregationOptions]);
+  }, [columnOptions.length]); // Only depend on length, not the entire array
 
   const handleAddValue = () => {
     console.log("Adding new value field");
@@ -85,26 +101,85 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
     setAggregations(newAggregations);
   };
 
+  // Reset form to initial state
+  const resetForm = () => {
+    console.log("Resetting form to initial state");
+    if (columns && columns.length > 0) {
+      const columnKeys = columns.map((col) => col.accessorKey);
+      if (columnKeys.length > 0) {
+        setRows([columnKeys[0]]);
+      }
+      if (columnKeys.length > 1) {
+        setColumnsFields([columnKeys[1]]);
+      }
+      if (columnKeys.length > 2) {
+        setValues([columnKeys[2]]);
+        setAggregations([aggregationOptions[0]]);
+      }
+    } else {
+      setRows([]);
+      setColumnsFields([]);
+      setValues([]);
+      setAggregations([]);
+    }
+    setError("");
+    setSuccessMessage("");
+  };
+
   const handleGenerate = () => {
     console.log("=== GENERATING PIVOT TABLE ===");
-    console.log("Generating pivot table with current configuration");
+    console.log("Current state:", {
+      rows: rows,
+      columnsFields: columnsFields,
+      values: values,
+      aggregations: aggregations
+    });
 
-    // Validation
+    // Clear any previous errors
+    setError("");
+
+    // If no selections made, try to initialize with defaults
+    if (rows.length === 0 && columnsFields.length === 0 && values.length === 0) {
+      console.log("No selections made, initializing with defaults");
+      if (columnOptions.length > 0) {
+        const defaultState = getDefaultState();
+        setRows(defaultState.rows);
+        setColumnsFields(defaultState.columnsFields);
+        setValues(defaultState.values);
+        setAggregations(defaultState.aggregations);
+        
+        // Use the default values for generation
+        const config = {
+          rows: defaultState.rows,
+          columns: defaultState.columnsFields,
+          values: defaultState.values,
+          aggregations: defaultState.aggregations,
+        };
+        
+        console.log("Using default configuration:", config);
+        onDataGenerate(config);
+        setSuccessMessage("Pivot table generated with default settings!");
+        setTimeout(() => setSuccessMessage(""), 3000);
+        return;
+      }
+    }
+
+    // Simple validation
     if (rows.length === 0) {
       const errorMsg = "Please select at least one field for Rows";
-      console.warn(errorMsg);
+      console.warn("Validation failed - no rows selected:", errorMsg);
       setError(errorMsg);
       return;
     }
     if (columnsFields.length === 0) {
       const errorMsg = "Please select at least one field for Columns";
-      console.warn(errorMsg);
+      console.warn("Validation failed - no columns selected:", errorMsg);
       setError(errorMsg);
       return;
     }
     if (values.length === 0) {
       const errorMsg = "Please select at least one field for Values";
-      console.warn(errorMsg);
+      console.warn("Validation failed - no values selected:", errorMsg);
       setError(errorMsg);
       return;
     }
@@ -149,15 +224,15 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
     // Validate that all fields exist in the data
     console.log("Sending configuration to parent component");
     onDataGenerate(config);
+    
+    // Show success message after successful generation
+    console.log("Pivot table generated successfully");
+    setSuccessMessage("Pivot table generated successfully!");
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 3000);
+    // Don't reset form - keep the configuration for easy regeneration
   };
-
-  // Get column options for dropdowns
-  const columnOptions = columns
-    ? columns.map((col) => ({
-        value: col.accessorKey,
-        label: col.header,
-      }))
-    : [];
 
   console.log("Column options for dropdowns:", columnOptions);
 
@@ -172,6 +247,17 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
           {error}
         </div>
       )}
+
+      {successMessage && (
+        <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-md border border-green-200">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Debug information */}
+      <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md border border-blue-200 text-sm">
+        <strong>Debug Info:</strong> Rows: {rows.length}, Columns: {columnsFields.length}, Values: {values.length}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Rows Selection */}
@@ -325,21 +411,30 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3 mt-6">
+      <div className="flex justify-between mt-6">
         <button
           type="button"
-          onClick={onCancel}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          onClick={resetForm}
+          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
         >
-          Cancel
+          Reset
         </button>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          Generate Pivot Table
-        </button>
+        <div className="flex space-x-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Generate Pivot Table
+          </button>
+        </div>
       </div>
     </div>
   );

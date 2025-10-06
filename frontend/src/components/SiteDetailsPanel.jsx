@@ -3,7 +3,7 @@ import React from "react";
 const SiteDetailsPanel = ({ selectedSite, summaryStats, onClose }) => {
   if (!selectedSite) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-4 w-80 md:w-80">
+      <div className="site-details-container bg-white p-4 w-80 md:w-80">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">Site Details</h3>
           <button
@@ -125,7 +125,7 @@ const SiteDetailsPanel = ({ selectedSite, summaryStats, onClose }) => {
     "No future outlook data available for this site.";
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 w-80 md:w-80 max-h-screen overflow-y-auto">
+    <div className="site-details-container bg-white p-4 w-80 md:w-80 max-h-screen overflow-y-auto">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800">Site Details</h3>
         <button

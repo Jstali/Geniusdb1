@@ -1,0 +1,83 @@
+1. Data Processing Workflow
+Data Ingestion and Transformation
+Data Sources: The application processes electrical grid data from multiple sources:
+Grid and primary sites data
+Embedded Capacity Register (ECR) data for connections >1MW and <1MW
+LTDS (Long Term Development Statement) infrastructure projects
+DNOA (Distribution Network Operator Assessment) data
+Grid Supply Points overview data
+Data Processing Pipeline:
+Data is initially read from a CSV file (transformed_transformer_data.csv)
+Various calculations are performed:
+Generation capacity calculations
+Spare capacity calculations (summer/winter)
+Firm capacity calculations
+ECR data integration with connection status logic
+Total generation calculations
+Generation headroom calculations
+Data is filtered to remove invalid records
+Final processed data is saved back to transformed_transformer_data.csv
+Backend API Workflow
+API Server:
+FastAPI backend running on port 8003
+Provides REST endpoints for data access
+Uses the processed data (df_final) directly instead of reading CSV files repeatedly
+Key endpoints include:
+/data/map - Map visualization data
+/data/transformers - Transformer data
+/api/map-data - Homepage map data with filtering
+View management endpoints for saving/loading user configurations
+2. Frontend Workflow
+User Interface Flow
+Dashboard Access:
+User accesses the application through a web browser
+Landing page shows map visualization with power grid data
+Color-coded markers represent different power headroom levels
+Data Exploration:
+Users can filter data by:
+Site name
+Voltage level
+Available power
+Network operator
+Interactive map allows zooming and panning
+Clicking markers shows detailed information
+View Management:
+Users can save custom views with specific column selections
+Views can be saved to slots (View 1-5)
+Saved views can be loaded later
+Each view can have its own filters and configurations
+Data Visualization:
+Map view showing spatial distribution of grid sites
+Table view with detailed data
+Chart visualizations for selected data
+3. Data Flow Architecture
+Frontend-Backend Communication
+API Communication:
+Frontend makes HTTP requests to backend API
+Backend processes requests using the pre-loaded df_final DataFrame
+Responses are returned in JSON format
+Map data includes spatial coordinates for visualization
+Real-time Updates:
+Filters applied in frontend are sent to backend
+Backend processes filters and returns updated data
+Map and table views update dynamically
+4. Key Features Workflow
+Map Visualization
+Marker Display:
+Spatial coordinates from "Spatial Coordinates" column are parsed
+Markers are color-coded based on generation headroom values
+Different marker icons for different site types
+Info windows show detailed site information when markers are clicked
+Data Filtering
+Filter Application:
+Users select filter criteria in frontend
+Filters are sent to backend API
+Backend applies filters to the df_final DataFrame
+Filtered results are returned to frontend
+Map and table views update with filtered data
+View Management
+View Saving/Loading:
+User configures view (columns, filters)
+Configuration is saved to SQLite database
+Views can be loaded from database
+Saved views maintain user preferences

@@ -3,7 +3,7 @@ import React from "react";
 const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
   if (!selectedSite) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6 h-full overflow-y-auto">
+      <div className="site-details-container bg-white p-6 h-full overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-semibold text-gray-800">Site Details</h3>
           <button
@@ -123,7 +123,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
     "No future outlook data available for this site.";
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 h-full overflow-y-auto">
+    <div className="site-details-container bg-white p-6 h-full overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold text-gray-800">Site Details</h3>
         <button

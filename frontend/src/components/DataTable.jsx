@@ -77,6 +77,11 @@ const DataTable = ({
   error,
   selectedColumns = [], // Add this prop
   onSelectedColumnsChange, // Add this prop to handle column selection changes
+  onFilteredDataChange = () => {}, // Add this prop to expose filtered data to parent
+  onFiltersChange = () => {}, // Add this prop to expose current filters to parent
+  initialFilters = {}, // Add this prop to accept initial filters
+  initialSortConfig = null, // Add this prop to accept initial sort configuration
+  initialPaginationConfig = null, // Add this prop to accept initial pagination configuration
 }) => {
   // Initialize all hooks first to maintain consistent order
   const [columnFilters, setColumnFilters] = useState([]);
@@ -102,6 +107,7 @@ const DataTable = ({
   const tableRef = useRef(null);
   const dropdownRefs = useRef({});
   const columnToggleRef = useRef(null);
+  const initialFiltersApplied = useRef(false);
 
   // Debugging logs
   console.log("DataTable: Component called with props", {
@@ -109,7 +115,10 @@ const DataTable = ({
     columns: `Array with ${columns.length} items`,
     loading,
     selectedColumns,
+    initialFilters,
+    componentKey: `table-${selectedColumns?.length || 0}-${JSON.stringify(selectedColumns || [])}`
   });
+
 
   // Set equal initial column sizes (Excel-like)
   const DEFAULT_COLUMN_WIDTH = 150;
@@ -133,19 +142,28 @@ const DataTable = ({
 
   // Apply column visibility based on selected columns
   useEffect(() => {
+    console.log("DataTable: Column visibility useEffect triggered", {
+      columnsLength: columns?.length,
+      selectedColumns,
+      selectedColumnsLength: selectedColumns?.length
+    });
+    
     if (columns && columns.length > 0) {
       const visibility = {};
       columns.forEach((col) => {
         // If selectedColumns is provided and not empty, only show selected columns
-        if (selectedColumns && selectedColumns.length > 0) {
-          visibility[col.accessorKey] = selectedColumns.includes(
-            col.accessorKey
-          );
+        // If selectedColumns is empty array or not provided, show all columns by default
+        if (selectedColumns && Array.isArray(selectedColumns) && selectedColumns.length > 0) {
+          const isVisible = selectedColumns.includes(col.accessorKey);
+          visibility[col.accessorKey] = isVisible;
+          console.log(`DataTable: Column ${col.accessorKey} visibility: ${isVisible} (from selectedColumns)`);
         } else {
-          // By default, all columns are visible
+          // By default, all columns are visible when selectedColumns is empty or not provided
           visibility[col.accessorKey] = true;
+          console.log(`DataTable: Column ${col.accessorKey} visibility: true (default - no selectedColumns or empty array)`);
         }
       });
+      console.log("DataTable: Setting column visibility:", visibility);
       setColumnVisibility(visibility);
     }
   }, [columns, selectedColumns]);
@@ -313,6 +331,118 @@ const DataTable = ({
     columnResizeMode: "onChange",
     debugTable: false,
   });
+
+  // Notify parent component when filtered data changes
+  useEffect(() => {
+    if (onFilteredDataChange && table) {
+      const filteredRows = table.getFilteredRowModel().rows;
+      const filteredData = filteredRows.map(row => row.original);
+      console.log("DataTable: Notifying parent of filtered data change", {
+        originalDataLength: data.length,
+        filteredDataLength: filteredData.length,
+        sampleFilteredData: filteredData.slice(0, 3)
+      });
+      onFilteredDataChange(filteredData);
+    }
+  }, [table, onFilteredDataChange, data.length, columnFilters, globalFilter, sorting, columnVisibility]);
+
+  // Apply initial filters when they change (only once per initialFilters change)
+  useEffect(() => {
+    console.log("DataTable: Initial filters useEffect triggered", {
+      initialFilters,
+      hasInitialFilters: initialFilters && Object.keys(initialFilters).length > 0,
+      currentColumnFilters: columnFilters,
+      initialFiltersApplied: initialFiltersApplied.current
+    });
+    
+    if (initialFilters && Object.keys(initialFilters).length > 0 && !initialFiltersApplied.current) {
+      console.log("DataTable: Applying initial filters", initialFilters);
+      
+      const newColumnFilters = [];
+      let newGlobalFilter = "";
+      
+      Object.entries(initialFilters).forEach(([columnId, filterValues]) => {
+        if (columnId === "_global") {
+          newGlobalFilter = filterValues;
+          console.log("DataTable: Setting global filter:", newGlobalFilter);
+        } else if (filterValues && filterValues.length > 0) {
+          newColumnFilters.push({
+            id: columnId,
+            value: filterValues
+          });
+          console.log(`DataTable: Adding column filter for ${columnId}:`, filterValues);
+        }
+      });
+      
+      console.log("DataTable: Final column filters:", newColumnFilters);
+      console.log("DataTable: Final global filter:", newGlobalFilter);
+      
+      setColumnFilters(newColumnFilters);
+      setGlobalFilter(newGlobalFilter);
+      
+      // Update multi-select values for UI consistency
+      const newMultiSelectValues = {};
+      newColumnFilters.forEach(filter => {
+        newMultiSelectValues[filter.id] = filter.value;
+      });
+      setColumnMultiSelectValues(newMultiSelectValues);
+      
+      initialFiltersApplied.current = true;
+    } else if (!initialFilters || Object.keys(initialFilters).length === 0) {
+      console.log("DataTable: No initial filters to apply");
+      initialFiltersApplied.current = false;
+    } else {
+      console.log("DataTable: Initial filters already applied, skipping");
+    }
+  }, [initialFilters]);
+
+  // Apply initial sort configuration
+  useEffect(() => {
+    if (initialSortConfig && initialSortConfig.sortBy && initialSortConfig.sortBy.length > 0) {
+      console.log("DataTable: Applying initial sort config", initialSortConfig);
+      setSorting(initialSortConfig.sortBy.map(sort => ({
+        id: sort.id,
+        desc: sort.desc || false
+      })));
+    }
+  }, [initialSortConfig]);
+
+  // ✅ Fixed missing setPageSize state - Apply initial pagination configuration
+  useEffect(() => {
+    if (initialPaginationConfig) {
+      console.log("DataTable: Applying initial pagination config", initialPaginationConfig);
+      if (initialPaginationConfig.pageSize || initialPaginationConfig.currentPage) {
+        setPagination(prev => ({
+          pageIndex: initialPaginationConfig.currentPage ? initialPaginationConfig.currentPage - 1 : prev.pageIndex, // Convert to 0-based index
+          pageSize: initialPaginationConfig.pageSize || prev.pageSize
+        }));
+      }
+    }
+  }, [initialPaginationConfig]);
+
+  // Notify parent component when filters change
+  useEffect(() => {
+    if (onFiltersChange) {
+      // Convert columnFilters to a more readable format
+      const filters = {};
+      columnFilters.forEach(filter => {
+        if (filter.value && filter.value.length > 0) {
+          filters[filter.id] = filter.value;
+        }
+      });
+      
+      // Add global filter if present
+      if (globalFilter) {
+        filters._global = globalFilter;
+      }
+      
+      console.log("DataTable: Notifying parent of filter changes", {
+        columnFilters: filters,
+        globalFilter
+      });
+      onFiltersChange(filters);
+    }
+  }, [columnFilters, globalFilter, onFiltersChange]);
 
   // Get unique values for each column
   const getColumnFilterOptions = useMemo(() => {
@@ -500,8 +630,20 @@ const DataTable = ({
 
   // Clear specific column filter
   const clearColumnFilter = (columnId) => {
-    setColumnFilters((prev) => prev.filter((f) => f.id !== columnId));
-    setColumnMultiSelectValues((prev) => ({ ...prev, [columnId]: [] }));
+    console.log("DataTable: clearColumnFilter called for columnId:", columnId);
+    console.log("DataTable: Current columnFilters before clear:", columnFilters);
+    
+    setColumnFilters((prev) => {
+      const newFilters = prev.filter((f) => f.id !== columnId);
+      console.log("DataTable: New columnFilters after clear:", newFilters);
+      return newFilters;
+    });
+    
+    setColumnMultiSelectValues((prev) => {
+      const newValues = { ...prev, [columnId]: [] };
+      console.log("DataTable: New columnMultiSelectValues after clear:", newValues);
+      return newValues;
+    });
   };
 
   // Calculate column size with fallback to default width
@@ -593,7 +735,7 @@ const DataTable = ({
                 value={globalFilter ?? ""}
                 onChange={(e) => setGlobalFilter(e.target.value)}
                 placeholder="Search all columns..."
-                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent "
               />
               <svg
                 className="absolute left-3 top-2.5 h-4 w-4 text-gray-400"
@@ -620,7 +762,7 @@ const DataTable = ({
           <div className="relative" ref={columnToggleRef}>
             <button
               onClick={() => setShowColumnToggle(!showColumnToggle)}
-              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 transform"
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Columns
             </button>
@@ -699,7 +841,7 @@ const DataTable = ({
           {/* Pivot Table Toggle */}
           <button
             onClick={toggleViewMode}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 ${
+            className={`px-3 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 ${
               isPivotMode
                 ? "text-white bg-blue-600 border border-blue-600 focus:ring-blue-500"
                 : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:ring-gray-500"
@@ -711,7 +853,7 @@ const DataTable = ({
           {/* Export CSV Button */}
           <button
             onClick={exportToCSV}
-            className="px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-300 transform"
+            className="px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             <svg
               className="w-4 h-4 mr-2 inline-block"
@@ -733,7 +875,7 @@ const DataTable = ({
           {(columnFilters.length > 0 || globalFilter) && (
             <button
               onClick={clearAllFilters}
-              className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 transform"
+              className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               Clear Filters
             </button>
@@ -752,8 +894,13 @@ const DataTable = ({
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                 Global: {globalFilter}
                 <button
-                  onClick={() => setGlobalFilter("")}
-                  className="ml-1 text-purple-600 hover:text-purple-800"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("DataTable: Global filter remove button clicked");
+                    setGlobalFilter("");
+                  }}
+                  className="ml-1 text-purple-600 hover:text-purple-800 cursor-pointer"
                 >
                   ×
                 </button>
@@ -773,8 +920,13 @@ const DataTable = ({
                 >
                   {column?.header}: {filterValueCount} selected
                   <button
-                    onClick={() => clearColumnFilter(filter.id)}
-                    className="ml-1 text-blue-600 hover:text-blue-800"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("DataTable: Filter remove button clicked for columnId:", filter.id);
+                      clearColumnFilter(filter.id);
+                    }}
+                    className="ml-1 text-blue-600 hover:text-blue-800 cursor-pointer"
                   >
                     ×
                   </button>
@@ -802,10 +954,13 @@ const DataTable = ({
       )}
 
       {/* Table or Pivot Table View */}
-      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden table-container">
         {isPivotMode && pivotConfig ? (
           // Pivot Table View
           <div className="p-4">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Pivot Table</h3>
+            </div>
             {data && data.length > 0 ? (
               <PivotTableView data={data} pivotConfig={pivotConfig} />
             ) : (
@@ -847,7 +1002,7 @@ const DataTable = ({
                       >
                         <div className="flex items-center justify-between h-full">
                           <div
-                            className="flex items-center cursor-pointer hover:text-blue-200 px-4 py-3 flex-1 transition-colors duration-200"
+                            className="flex items-center cursor-pointer hover:text-blue-200 px-4 py-3 flex-1"
                             onClick={header.column.getToggleSortingHandler()}
                           >
                             <span className="mr-2 truncate">
@@ -869,7 +1024,7 @@ const DataTable = ({
 
                           {/* Resize Handle */}
                           <div
-                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-blue-400 hover:bg-blue-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-blue-400 hover:bg-blue-300 opacity-0 group-hover:opacity-100"
                             onMouseDown={(e) => {
                               e.preventDefault();
                               setIsResizing(columnId);
@@ -888,7 +1043,7 @@ const DataTable = ({
                             >
                               <button
                                 onClick={() => toggleDropdown(columnId)}
-                                className={`p-1 rounded hover:bg-blue-500 transition-colors duration-200 transform hover:scale-110 ${
+                                className={`p-1 rounded hover:bg-blue-500 ${
                                   hasFilter
                                     ? "text-blue-200 bg-blue-700"
                                     : "text-blue-300"
@@ -919,7 +1074,7 @@ const DataTable = ({
                                     </div>
 
                                     {/* Select All Option */}
-                                    <label className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer transition-colors duration-200">
+                                    <label className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer ">
                                       <input
                                         type="checkbox"
                                         checked={
@@ -949,7 +1104,7 @@ const DataTable = ({
                                       (value) => (
                                         <label
                                           key={value}
-                                          className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+                                          className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer"
                                         >
                                           <input
                                             type="checkbox"
@@ -991,7 +1146,7 @@ const DataTable = ({
                     <tr
                       key={row.id}
                       id={`row-${rowId}`}
-                      className={`transition-all duration-200 cursor-pointer transform hover:scale-[1.01] hover:shadow-md ${
+                      className={`cursor-pointer ${
                         idx % 2 === 0 ? "bg-white" : "bg-gray-50"
                       } hover:bg-blue-50 ${isSelected ? "bg-yellow-100" : ""}`}
                       onClick={() => handleRowClick(row)}
@@ -1012,7 +1167,7 @@ const DataTable = ({
                             }}
                           >
                             <div
-                              className="px-4 py-3 truncate hover:text-blue-600 transition-colors duration-200"
+                              className="px-4 py-3 truncate hover:text-blue-600"
                               title={String(cell.getValue())}
                             >
                               {flexRender(
@@ -1062,7 +1217,7 @@ const DataTable = ({
                 <select
                   value={table.getState().pagination.pageSize}
                   onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="rounded border-gray-300 text-sm focus:border-blue-300 focus:ring focus:ring-blue-200 transition-all duration-200 hover:shadow-md"
+                  className="rounded border-gray-300 text-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
                 >
                   {[5, 10, 20, 30, 40, 50].map((pageSize) => (
                     <option key={pageSize} value={pageSize}>
@@ -1074,14 +1229,14 @@ const DataTable = ({
                   <button
                     onClick={() => table.setPageIndex(0)}
                     disabled={!table.getCanPreviousPage()}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all duration-300 transform hover:scale-105 hover:shadow-md"
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
                   >
                     ««
                   </button>
                   <button
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
-                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all duration-300 transform hover:scale-105 hover:shadow-md"
+                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
                   >
                     ‹
                   </button>
@@ -1092,14 +1247,14 @@ const DataTable = ({
                   <button
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
-                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all duration-300 transform hover:scale-105 hover:shadow-md"
+                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
                   >
                     ›
                   </button>
                   <button
                     onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                     disabled={!table.getCanNextPage()}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-all duration-300 transform hover:scale-105 hover:shadow-md"
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
                   >
                     »»
                   </button>

@@ -321,10 +321,10 @@ const TableView = ({ updateTableData }) => {
             columnsLength: columns.length,
           })}
           {filteredData.length > 0 ? (
-            <DataTable data={filteredData} columns={columns} />
+            <DataTable data={filteredData} columns={columns} onFilteredDataChange={() => {}} />
           ) : data.length > 0 ? (
             // If filteredData is empty but we have data, show all data
-            <DataTable data={data} columns={columns} />
+            <DataTable data={data} columns={columns} onFilteredDataChange={() => {}} />
           ) : (
             <Paper sx={{ p: 4, textAlign: "center" }}>
               <Typography variant="h6" color="text.secondary">

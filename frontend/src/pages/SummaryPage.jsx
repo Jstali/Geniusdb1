@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+
 const SummaryPage = () => {
   const [summaryData, setSummaryData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -9,22 +11,10 @@ const SummaryPage = () => {
     const fetchSummaryData = async () => {
       try {
         setLoading(true);
+        console.log("SummaryPage: Fetching summary data...");
 
-        // First, trigger the data processing script
-        const processResponse = await fetch("/process/transformers");
-        if (!processResponse.ok) {
-          throw new Error(
-            `HTTP error while processing data! status: ${processResponse.status}`
-          );
-        }
-        const processResult = await processResponse.json();
-        if (processResult.status === "error") {
-          throw new Error(processResult.message);
-        }
-        console.log("Data processing result:", processResult);
-
-        // Then fetch the transformer data from the backend API
-        const response = await fetch("/data/transformers");
+        // Fetch the transformer data from the backend API
+        const response = await fetch(`${API_BASE}/data/transformers`);
         if (!response.ok) {
           throw new Error(
             `HTTP error while fetching data! status: ${response.status}`
@@ -50,7 +40,7 @@ const SummaryPage = () => {
         // Calculate generation headroom statistics
         const headroomValues = jsonData
           .map((site) => site["Generation Headroom Mw"])
-          .filter((val) => val !== null && val !== undefined);
+          .filter((val) => val !== null && val !== undefined && !isNaN(val));
 
         const avgHeadroom =
           headroomValues.length > 0
@@ -63,6 +53,11 @@ const SummaryPage = () => {
 
         const minHeadroom =
           headroomValues.length > 0 ? Math.min(...headroomValues) : 0;
+
+        // Calculate headroom categories
+        const greenSites = headroomValues.filter(val => val >= 50).length;
+        const amberSites = headroomValues.filter(val => val >= 20 && val < 50).length;
+        const redSites = headroomValues.filter(val => val < 20).length;
 
         // Calculate site type distribution
         const siteTypeDistribution = {};
@@ -89,18 +84,43 @@ const SummaryPage = () => {
           .slice(0, 10)
           .map(([county, count]) => ({ county, count }));
 
+        // Calculate operator distribution
+        const operatorDistribution = {};
+        jsonData.forEach((site) => {
+          const operator = site["Licence Area"];
+          if (operator && operator !== "\\N") {
+            operatorDistribution[operator] = (operatorDistribution[operator] || 0) + 1;
+          }
+        });
+
+        // Get top 5 operators
+        const topOperators = Object.entries(operatorDistribution)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([operator, count]) => ({ operator, count }));
+
+        // Calculate total generation headroom
+        const totalHeadroom = headroomValues.reduce((sum, val) => sum + val, 0);
+
         // Prepare the summary data
         const data = {
           totalSites,
           voltageDistribution,
           avgHeadroom: avgHeadroom.toFixed(2),
-          maxHeadroom,
-          minHeadroom,
+          maxHeadroom: maxHeadroom.toFixed(2),
+          minHeadroom: minHeadroom.toFixed(2),
+          totalHeadroom: totalHeadroom.toFixed(2),
+          greenSites,
+          amberSites,
+          redSites,
           siteTypeDistribution,
           topCounties,
+          topOperators,
+          operatorDistribution,
           totalVoltages: Object.keys(voltageDistribution).length,
           totalSiteTypes: Object.keys(siteTypeDistribution).length,
           totalCounties: Object.keys(countyDistribution).length,
+          totalOperators: Object.keys(operatorDistribution).length,
         };
 
         setSummaryData(data);
@@ -173,17 +193,58 @@ const SummaryPage = () => {
 
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            Total Headroom
+          </h3>
+          <p className="text-3xl font-bold text-indigo-600">
+            {summaryData.totalHeadroom} MW
+          </p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
             Voltage Levels
           </h3>
           <p className="text-3xl font-bold text-purple-600">
             {summaryData.totalVoltages}
           </p>
         </div>
+      </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Counties</h3>
-          <p className="text-3xl font-bold text-orange-600">
-            {summaryData.totalCounties}
+      {/* Headroom Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            Green Sites (≥50MW)
+          </h3>
+          <p className="text-3xl font-bold text-green-600">
+            {summaryData.greenSites}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {((summaryData.greenSites / summaryData.totalSites) * 100).toFixed(1)}% of total
+          </p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            Amber Sites (20-49MW)
+          </h3>
+          <p className="text-3xl font-bold text-yellow-600">
+            {summaryData.amberSites}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {((summaryData.amberSites / summaryData.totalSites) * 100).toFixed(1)}% of total
+          </p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            Red Sites (&lt;20MW)
+          </h3>
+          <p className="text-3xl font-bold text-red-600">
+            {summaryData.redSites}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {((summaryData.redSites / summaryData.totalSites) * 100).toFixed(1)}% of total
           </p>
         </div>
       </div>
@@ -231,7 +292,7 @@ const SummaryPage = () => {
       </div>
 
       {/* Top Counties */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-xl font-bold text-gray-800 mb-4">
           Top 10 Counties by Site Count
         </h2>
@@ -257,6 +318,47 @@ const SummaryPage = () => {
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                       {item.count}
                     </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Top Operators */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">
+          Top 5 Network Operators by Site Count
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Operator
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Site Count
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Percentage
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {summaryData.topOperators.map((item, index) => (
+                <tr key={item.operator}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {item.operator}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      {item.count}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {((item.count / summaryData.totalSites) * 100).toFixed(1)}%
                   </td>
                 </tr>
               ))}

@@ -20,12 +20,17 @@ const Header = ({
   onViewLoad = null, // Add onViewLoad prop
 }) => {
   return (
-    <header className={`w-full px-6 py-3 shadow-md bg-white ${className}`}>
+    <header className={`w-full px-6 py-4 shadow-md bg-white ${className}`}>
       <div className="max-w-full mx-auto">
         <div className="flex items-center justify-between">
           {/* Left: Title */}
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-blue-600">Genius DB</h1>
+            <img 
+              src="/geniusdb2.png" 
+              alt="Genius DB Logo" 
+              className="w-16 h-16 mr-3 object-contain"
+            />
+            <h1 className="text-2xl font-bold text-blue-600">GeniusDB</h1>
           </div>
 
           {/* Right: children or logout */}

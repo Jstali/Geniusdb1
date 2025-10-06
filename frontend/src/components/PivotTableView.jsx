@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import { HotTable } from "@handsontable/react";
 import "handsontable/dist/handsontable.full.css";
@@ -105,8 +105,114 @@ const PivotTableView = ({ data }) => {
   // State to track if pivot table has been generated
   const [isGenerated, setIsGenerated] = useState(false);
 
-  // Generate pivot table data based on configuration
+  // State for generated pivot data
+  const [generatedPivotData, setGeneratedPivotData] = useState([]);
+
+  // Effect to generate pivot data when config changes
+  useEffect(() => {
+    console.log("=== PIVOT TABLE VIEW: useEffect triggered ===");
+    console.log("useEffect dependencies:", {
+      pivotConfig: pivotConfig,
+      dataLength: data?.length || 0,
+      isGenerated: isGenerated
+    });
+    
+    if (pivotConfig && data && data.length > 0) {
+      console.log("useEffect: Generating pivot data with config:", pivotConfig);
+      try {
+        const newPivotData = generatePivotData(data, pivotConfig);
+        setGeneratedPivotData(newPivotData);
+        console.log("useEffect: Pivot data generated successfully, rows:", newPivotData.length);
+      } catch (error) {
+        console.error("useEffect: Error generating pivot data:", error);
+        setGeneratedPivotData([]);
+      }
+    } else {
+      console.log("useEffect: Skipping data generation - missing requirements");
+      setGeneratedPivotData([]);
+    }
+  }, [pivotConfig, data]);
+
+  // Function to generate pivot data
+  const generatePivotData = (data, config) => {
+    if (
+      !data ||
+      data.length === 0 ||
+      !config ||
+      config.rows.length === 0 ||
+      config.values.length === 0
+    ) {
+      return [];
+    }
+
+    try {
+      console.log("Starting pivot data generation...");
+      // Get all row fields
+      const rowFields = config.rows;
+
+      // Get all value fields with their aggregations
+      const valueConfigs = config.values;
+
+      // Group data by all row dimensions
+      const groupedData = groupBy(data, rowFields);
+
+      // Create result array
+      const result = [];
+
+      // Process each group
+      Object.entries(groupedData).forEach(([groupKey, groupItems]) => {
+        const row = {};
+
+        // Add all row group values
+        const rowKeys = groupKey.split("|");
+        rowFields.forEach((field, index) => {
+          row[field] = rowKeys[index] || "";
+        });
+
+        // Calculate aggregated values for each value field
+        valueConfigs.forEach((valueConfig) => {
+          const valueField = valueConfig.field;
+          const aggFunc = valueConfig.aggregation.toLowerCase();
+
+          let aggValue;
+          switch (aggFunc) {
+            case "sum":
+              aggValue = sum(groupItems, valueField);
+              break;
+            case "avg":
+              aggValue = average(groupItems, valueField);
+              break;
+            case "count":
+              aggValue = count(groupItems);
+              break;
+            case "min":
+              aggValue = min(groupItems, valueField);
+              break;
+            case "max":
+              aggValue = max(groupItems, valueField);
+              break;
+            default:
+              aggValue = sum(groupItems, valueField);
+          }
+          row[valueField] = aggValue;
+        });
+
+        result.push(row);
+      });
+
+      console.log("Pivot data generation completed. Rows generated:", result.length);
+      return result;
+    } catch (error) {
+      console.error("Error generating pivot data:", error);
+      return [];
+    }
+  };
+
+  // Generate pivot table data based on configuration (keep for backward compatibility)
   const pivotData = useMemo(() => {
+    console.log("Generating pivot data with config:", pivotConfig);
+    console.log("Data length:", data?.length || 0);
+    
     // Only generate data when configuration is provided
     if (
       !data ||
@@ -115,10 +221,12 @@ const PivotTableView = ({ data }) => {
       pivotConfig.rows.length === 0 ||
       pivotConfig.values.length === 0
     ) {
+      console.log("Skipping pivot data generation - missing requirements");
       return [];
     }
 
     try {
+      console.log("Starting pivot data generation...");
       // Get all row fields
       const rowFields = pivotConfig.rows;
 
@@ -172,6 +280,7 @@ const PivotTableView = ({ data }) => {
         result.push(row);
       });
 
+      console.log("Pivot data generation completed. Rows generated:", result.length);
       return result;
     } catch (error) {
       console.error("Error generating pivot data:", error);
@@ -181,8 +290,8 @@ const PivotTableView = ({ data }) => {
 
   // Prepare column definitions for Handsontable based on pivot data
   const columnDefs = useMemo(() => {
-    if (pivotData && pivotData.length > 0) {
-      const firstRow = pivotData[0];
+    if (generatedPivotData && generatedPivotData.length > 0) {
+      const firstRow = generatedPivotData[0];
       return Object.keys(firstRow).map((key) => {
         // Determine column type based on data
         if (typeof firstRow[key] === "number") {
@@ -198,20 +307,20 @@ const PivotTableView = ({ data }) => {
     }
     // Return empty array when no pivot data
     return [];
-  }, [pivotData]);
+  }, [generatedPivotData]);
 
   // Get column headers based on pivot data
   const columnHeaders = useMemo(() => {
-    if (pivotData && pivotData.length > 0) {
-      return Object.keys(pivotData[0]);
+    if (generatedPivotData && generatedPivotData.length > 0) {
+      return Object.keys(generatedPivotData[0]);
     }
     // Return empty array when no pivot data
     return [];
-  }, [pivotData]);
+  }, [generatedPivotData]);
 
   // Configure Handsontable settings
   const hotSettings = {
-    data: pivotData,
+    data: generatedPivotData,
     columns: columnDefs,
     colHeaders: columnHeaders,
     rowHeaders: true,
@@ -282,15 +391,26 @@ const PivotTableView = ({ data }) => {
 
   // Handle pivot configuration from PivotConfigPanel
   const handleDataGenerate = (config) => {
+    console.log("=== PIVOT TABLE VIEW: RECEIVED CONFIG ===");
     console.log("Received pivot configuration:", config);
+    
+    // Validate the config before proceeding
+    if (!config || !config.rows || !config.columns || !config.values) {
+      console.error("Invalid configuration received:", config);
+      return;
+    }
+    
+    console.log("Setting pivot config and marking as generated");
     setPivotConfig(config);
     setIsGenerated(true);
+    console.log("Pivot table generation initiated");
   };
 
   // Handle cancel from PivotConfigPanel
   const handleCancel = () => {
     setPivotConfig(null);
     setIsGenerated(false);
+    setGeneratedPivotData([]);
   };
 
   return (
@@ -305,7 +425,7 @@ const PivotTableView = ({ data }) => {
       )}
 
       {/* Export buttons - only show when there's data and pivot table is generated */}
-      {isGenerated && pivotData.length > 0 && (
+      {isGenerated && generatedPivotData.length > 0 && (
         <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-end space-x-2">
           <button
             onClick={exportToCSV}
@@ -333,7 +453,7 @@ const PivotTableView = ({ data }) => {
       )}
 
       {/* Message when no data available after generation */}
-      {data && data.length > 0 && isGenerated && pivotData.length === 0 && (
+      {data && data.length > 0 && isGenerated && generatedPivotData.length === 0 && (
         <div className="p-8 text-center text-gray-500">
           <p>
             No data available for the selected options. Please try different
@@ -343,7 +463,7 @@ const PivotTableView = ({ data }) => {
       )}
 
       {/* Handsontable component - only show when there's data to display */}
-      {isGenerated && pivotData.length > 0 && (
+      {isGenerated && generatedPivotData.length > 0 && (
         <HotTable ref={hotTableRef} settings={hotSettings} />
       )}
     </div>

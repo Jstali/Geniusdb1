@@ -15,7 +15,7 @@ const ViewManagementModal = ({
     xAxis: "",
     yAxis: "",
   });
-  const [filters, setFilters] = useState({});
+  // Remove filters state - we'll display table filters instead
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -60,11 +60,7 @@ const ViewManagementModal = ({
           });
         }
 
-        try {
-          setFilters(savedView.filters ? JSON.parse(savedView.filters) : {});
-        } catch (e) {
-          setFilters({});
-        }
+        // Filters will be handled by the table component
       } else {
         // Reset to defaults
         setViewName(`View ${selectedSlot}`);
@@ -73,7 +69,7 @@ const ViewManagementModal = ({
           xAxis: "",
           yAxis: "",
         });
-        setFilters({});
+        // Filters will be handled by the table component
       }
     }
   }, [selectedSlot, isOpen, views]);
@@ -118,21 +114,26 @@ const ViewManagementModal = ({
         return;
       }
 
-      // Apply the loaded view configuration
+      // Parse all saved configurations
+      const savedFilters = data.filters ? JSON.parse(data.filters) : {};
+      const savedChartConfig = data.chart_config ? JSON.parse(data.chart_config) : { type: "bar", xAxis: "", yAxis: "" };
+      const savedMapConfig = data.map_config ? JSON.parse(data.map_config) : { locationColumn: "Site Name", showMarkers: true, markerFilter: [] };
+      const savedSortConfig = data.sort_config ? JSON.parse(data.sort_config) : { sortBy: [], sortDirection: "asc" };
+      const savedPaginationConfig = data.pagination_config ? JSON.parse(data.pagination_config) : { pageSize: 10, currentPage: 1 };
+
+      // Apply the loaded view configuration with all saved state
       onLoadView({
         tableView: {
-          selectedColumns: data.selected_columns
-            ? data.selected_columns.split(",")
-            : [],
-          filters: data.filters ? JSON.parse(data.filters) : {},
+          selectedColumns: data.selected_columns ? data.selected_columns.split(",") : [],
+          filters: savedFilters,
+          sortBy: savedSortConfig.sortBy,
+          sortDirection: savedSortConfig.sortDirection,
+          pageSize: savedPaginationConfig.pageSize,
+          currentPage: savedPaginationConfig.currentPage,
         },
-        chartView: data.chart_config
-          ? JSON.parse(data.chart_config)
-          : {
-              type: "bar",
-              xAxis: "",
-              yAxis: "",
-            },
+        chartView: savedChartConfig,
+        mapView: savedMapConfig,
+        viewName: data.name || `View ${selectedSlot}`,
       });
 
       setSuccess("View loaded successfully");
@@ -176,24 +177,32 @@ const ViewManagementModal = ({
       return;
     }
 
-    // Validate filters
-    const filterValidation = validateFilters(selectedColumns);
-    if (!filterValidation.valid) {
-      setError(filterValidation.message);
-      return;
-    }
+    // Filters will be handled by the table component - no validation needed
 
     try {
       setLoading(true);
       setError("");
       setSuccess("");
 
-      // Build payload according to requirements
+      // Build enhanced payload with all required state
       const payload = {
         name: viewName,
         selected_columns: selectedColumns.join(","),
         chart_config: JSON.stringify(chartConfig), // Store as JSON string
-        filters: JSON.stringify(filters), // Store as JSON string
+        filters: JSON.stringify(currentTableView?.filters || {}), // Store as JSON string
+        map_config: JSON.stringify({
+          locationColumn: "Site Name", // Default location column for map
+          showMarkers: true,
+          markerFilter: selectedColumns // Only show markers for selected columns
+        }),
+        sort_config: JSON.stringify({
+          sortBy: currentTableView?.sortBy || [],
+          sortDirection: currentTableView?.sortDirection || "asc"
+        }),
+        pagination_config: JSON.stringify({
+          pageSize: currentTableView?.pageSize || 10,
+          currentPage: currentTableView?.currentPage || 1
+        })
       };
 
       console.log("Saving view with payload:", payload);
@@ -238,10 +247,10 @@ const ViewManagementModal = ({
       // Notify parent component that view was saved
       if (onLoadView) {
         onLoadView({
-          tableView: {
-            selectedColumns: selectedColumns,
-            filters: filters,
-          },
+        tableView: {
+          selectedColumns: selectedColumns,
+          filters: currentTableView?.filters || {},
+        },
           chartView: chartConfig,
         });
       }
@@ -252,33 +261,7 @@ const ViewManagementModal = ({
     }
   };
 
-  // Validate filters
-  const validateFilters = (selectedColumns) => {
-    // Check if any filter references a non-selected column
-    for (const column in filters) {
-      if (!selectedColumns.includes(column)) {
-        return {
-          valid: false,
-          message: `Filter references non-selected column "${column}". Please remove or select the column.`,
-        };
-      }
-
-      // Check if any filter has an empty value
-      const columnFilters = filters[column];
-      if (columnFilters && columnFilters.length > 0) {
-        for (const filter of columnFilters) {
-          if (filter.operator && !filter.value && filter.value !== 0) {
-            return {
-              valid: false,
-              message: `Please enter a value for the filter on column "${column}"`,
-            };
-          }
-        }
-      }
-    }
-
-    return { valid: true };
-  };
+  // Filter validation removed - filters are handled by table component
 
   // Validate chart configuration
   const validateChartConfig = (selectedColumns) => {
@@ -341,7 +324,7 @@ const ViewManagementModal = ({
       // Refresh views list
       await fetchViews();
       setChartConfig({ type: "bar", xAxis: "", yAxis: "" });
-      setFilters({});
+      // Filters will be handled by the table component
       setViewName("");
       setSuccess("View reset successfully");
       setTimeout(() => {
@@ -374,30 +357,7 @@ const ViewManagementModal = ({
     });
   };
 
-  const addFilter = (column) => {
-    setFilters({
-      ...filters,
-      [column]: [...(filters[column] || []), { operator: "=", value: "" }],
-    });
-  };
-
-  const updateFilter = (column, index, field, value) => {
-    const newFilters = [...(filters[column] || [])];
-    newFilters[index] = { ...newFilters[index], [field]: value };
-    setFilters({
-      ...filters,
-      [column]: newFilters,
-    });
-  };
-
-  const removeFilter = (column, index) => {
-    const newFilters = [...(filters[column] || [])];
-    newFilters.splice(index, 1);
-    setFilters({
-      ...filters,
-      [column]: newFilters,
-    });
-  };
+  // Remove filter management functions - filters will come from table
 
   if (!isOpen) return null;
 
@@ -405,7 +365,7 @@ const ViewManagementModal = ({
   const selectedColumns = currentTableView?.selectedColumns || [];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
@@ -454,7 +414,7 @@ const ViewManagementModal = ({
                 <select
                   value={selectedSlot}
                   onChange={(e) => setSelectedSlot(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   disabled={loading}
                 >
                   <option value="">Choose a view slot</option>
@@ -517,7 +477,7 @@ const ViewManagementModal = ({
                 <select
                   value={selectedSlot}
                   onChange={(e) => setSelectedSlot(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   disabled={loading}
                 >
                   <option value="">Choose a view slot</option>
@@ -538,7 +498,7 @@ const ViewManagementModal = ({
                   value={viewName}
                   onChange={(e) => setViewName(e.target.value)}
                   placeholder={`View ${selectedSlot}`}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   disabled={loading}
                 />
               </div>
@@ -553,7 +513,7 @@ const ViewManagementModal = ({
                 <div className="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto">
                   {selectedColumns.length > 0 ? (
                     selectedColumns.map((column) => (
-                      <div key={column} className="py-1 text-sm">
+                      <div key={column} className="py-1 text-sm text-gray-900">
                         {column}
                       </div>
                     ))
@@ -581,7 +541,7 @@ const ViewManagementModal = ({
                         onChange={(e) =>
                           handleChartConfigChange("type", e.target.value)
                         }
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                       >
                         <option value="bar">Bar</option>
                         <option value="line">Line</option>
@@ -598,7 +558,7 @@ const ViewManagementModal = ({
                         onChange={(e) =>
                           handleChartConfigChange("xAxis", e.target.value)
                         }
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                       >
                         <option value="">Select column</option>
                         {selectedColumns.map((column) => (
@@ -617,7 +577,7 @@ const ViewManagementModal = ({
                         onChange={(e) =>
                           handleChartConfigChange("yAxis", e.target.value)
                         }
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                       >
                         <option value="">Select column</option>
                         {selectedColumns.map((column) => (
@@ -631,77 +591,26 @@ const ViewManagementModal = ({
                 </div>
               </div>
 
-              {/* Filters */}
+              {/* Current Table Filters - Display Only */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filters
+                  Current Table Filters
                 </label>
                 <div className="border border-gray-300 rounded-md p-3">
-                  {selectedColumns.map((column) => (
-                    <div key={`filter-${column}`} className="mb-3 last:mb-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">{column}</span>
-                        <button
-                          onClick={() => addFilter(column)}
-                          className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
-                        >
-                          Add Filter
-                        </button>
-                      </div>
-                      {filters[column] && filters[column].length > 0 && (
-                        <div className="ml-2 space-y-2">
-                          {filters[column].map((filter, index) => (
-                            <div
-                              key={`filter-${column}-${index}`}
-                              className="flex gap-2 items-center"
-                            >
-                              <select
-                                value={filter.operator}
-                                onChange={(e) =>
-                                  updateFilter(
-                                    column,
-                                    index,
-                                    "operator",
-                                    e.target.value
-                                  )
-                                }
-                                className="text-xs border border-gray-300 rounded px-1 py-1"
-                              >
-                                <option value="=">=</option>
-                                <option value="!=">!=</option>
-                                <option value=">">&gt;</option>
-                                <option value="<">&lt;</option>
-                                <option value=">=">&gt;=</option>
-                                <option value="<=">&lt;=</option>
-                                <option value="contains">contains</option>
-                                <option value="in">in</option>
-                              </select>
-                              <input
-                                type="text"
-                                value={filter.value}
-                                onChange={(e) =>
-                                  updateFilter(
-                                    column,
-                                    index,
-                                    "value",
-                                    e.target.value
-                                  )
-                                }
-                                className="text-xs border border-gray-300 rounded px-1 py-1 flex-grow"
-                                placeholder="Value"
-                              />
-                              <button
-                                onClick={() => removeFilter(column, index)}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
+                  {currentTableView?.filters && Object.keys(currentTableView.filters).length > 0 ? (
+                    <div className="space-y-2">
+                      {Object.entries(currentTableView.filters).map(([column, filterValues]) => (
+                        <div key={column} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-sm font-medium text-gray-900">{column}</span>
+                          <span className="text-sm text-gray-600">
+                            {Array.isArray(filterValues) ? filterValues.join(", ") : filterValues}
+                          </span>
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <p className="text-gray-500 text-sm">No filters applied in the table</p>
+                  )}
                 </div>
               </div>
 

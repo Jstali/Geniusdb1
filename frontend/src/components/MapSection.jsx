@@ -1,18 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-// Fix for default marker icons in React Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
+import GoogleMapComponent from "./GoogleMapComponent";
 
 // Function to determine marker color based on generation headroom
 const getMarkerColor = (headroom) => {
@@ -29,26 +16,32 @@ const getMarkerColor = (headroom) => {
   }
 };
 
-// Custom marker icon component
+// Custom marker icon component - using location pin symbol
 const createMarkerIcon = (color) => {
-  return L.divIcon({
-    className: "custom-icon",
-    html: `
-      <div style="position: relative; width: 20px; height: 20px;">
-        <div style="
-          width: 20px;
-          height: 20px;
-          background-color: ${color};
-          border: 2px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        "></div>
-      </div>
-    `,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    popupAnchor: [0, -10],
-  });
+  // Check if google.maps is available
+  if (typeof google === "undefined" || !google || !google.maps) {
+    // Fallback to location pin SVG path if Google Maps API is not loaded
+    return {
+      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+      fillColor: color,
+      fillOpacity: 1,
+      strokeColor: "white",
+      strokeWeight: 2,
+      scale: 1.5,
+      anchor: { x: 12, y: 24 }, // Anchor point at the bottom of the pin
+    };
+  }
+
+  // Use a custom location pin SVG path
+  return {
+    path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+    fillColor: color,
+    fillOpacity: 1,
+    strokeColor: "white",
+    strokeWeight: 2,
+    scale: 1.2,
+    anchor: new google.maps.Point(12, 24), // Anchor point at the bottom of the pin
+  };
 };
 
 const MapSection = ({
@@ -56,15 +49,19 @@ const MapSection = ({
   filters = {},
   onMarkerClick,
   activeView = null,
+  selectedColumns = [],
 }) => {
   const [markers, setMarkers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [error, setError] = useState(null);
-  const mapRef = useRef(null);
+  const [lastSuccessfulMarkers, setLastSuccessfulMarkers] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const abortControllerRef = useRef(null);
 
   // Get API base URL from environment or default to localhost:8000
   const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+
+  console.log("MapSection received props:", { data, filters, activeView });
 
   // Convert frontend filters to backend format
   const convertFilters = (frontendFilters) => {
@@ -136,16 +133,35 @@ const MapSection = ({
           console.log("Sending filters to backend:", backendFilters);
 
           // Prepare the request payload with the correct structure
+          // Use selectedColumns from saved view if available, otherwise use default location columns
+          const defaultLocationColumns = [
+            "site_name",
+            "latitude",
+            "longitude",
+            "voltage_level",
+            "available_power",
+            "network_operator",
+          ];
+          
+          let columnsToUse;
+          if (selectedColumns && selectedColumns.length > 0) {
+            // Add location columns if they're not already included
+            const locationColumns = ["latitude", "longitude", "site_name"];
+            columnsToUse = [...new Set([...selectedColumns, ...locationColumns])];
+          } else {
+            columnsToUse = defaultLocationColumns;
+          }
+          
+          console.log("=== MAP SECTION DEBUG ===");
+          console.log("MapSection: selectedColumns from props:", selectedColumns);
+          console.log("MapSection: selectedColumns length:", selectedColumns?.length || 0);
+          console.log("MapSection: Using columns for saved view map data:", columnsToUse);
+          console.log("MapSection: columnsToUse length:", columnsToUse?.length || 0);
+          console.log("=========================");
+          
           const payload = {
             filters: backendFilters,
-            selected_columns: [
-              "site_name",
-              "latitude",
-              "longitude",
-              "voltage_level",
-              "available_power",
-              "network_operator",
-            ],
+            selected_columns: columnsToUse,
           };
 
           // Make request to the new backend endpoint
@@ -172,22 +188,35 @@ const MapSection = ({
             throw new Error(result.error);
           }
 
-          // Transform backend response to markers
-          const transformedMarkers = result.rows.map((row, index) => {
-            return {
-              id: `${row.site_name}-${index}`,
-              position: [row.latitude, row.longitude],
-              popupText: `${row.site_name}`,
-              siteName: row.site_name,
-              siteVoltage: row.voltage_level,
-              generationHeadroom: row.available_power,
-              licenceArea: row.network_operator,
-              color: getMarkerColor(row.available_power),
-              ...row,
-            };
-          });
+          // Transform backend response to markers with proper numeric parsing
+          const transformedMarkers = result.rows
+            .map((row, index) => {
+              const lat = parseFloat(row.latitude);
+              const lng = parseFloat(row.longitude);
 
+              // Only include sites with valid coordinates
+              if (isNaN(lat) || isNaN(lng)) {
+                return null;
+              }
+
+              return {
+                id: `${row.site_name}-${index}`,
+                position: { lat, lng },
+                popupText: `${row.site_name}`,
+                siteName: row.site_name,
+                siteVoltage: row.voltage_level,
+                generationHeadroom: row.available_power,
+                licenceArea: row.network_operator,
+                color: getMarkerColor(row.available_power),
+                ...row,
+              };
+            })
+            .filter((marker) => marker !== null); // Remove null markers
+
+          console.log("Setting markers from active view:", transformedMarkers);
           setMarkers(transformedMarkers);
+          setLastSuccessfulMarkers(transformedMarkers);
+          setDataLoaded(true);
         } else {
           // Fallback to client-side filtering if no active view
           console.log(
@@ -249,7 +278,9 @@ const MapSection = ({
             return true;
           });
 
-          // Transform the filtered data into markers
+          console.log("Filtered data count:", filteredData.length);
+
+          // Transform the filtered data into markers with proper numeric parsing
           const transformedMarkers = filteredData
             .map((site, index) => {
               // Get spatial coordinates (format: "lat, lng")
@@ -259,54 +290,52 @@ const MapSection = ({
               }
 
               try {
-                const coords = spatialCoords.trim().split(", ");
-                if (coords.length !== 2) return null;
+                // Parse coordinates (format: "lat, lng")
+                const coords = spatialCoords
+                  .split(",")
+                  .map((coord) => parseFloat(coord.trim()));
+                if (
+                  coords.length !== 2 ||
+                  isNaN(coords[0]) ||
+                  isNaN(coords[1])
+                ) {
+                  return null;
+                }
 
-                const lat = parseFloat(coords[0]);
-                const lng = parseFloat(coords[1]);
+                const [lat, lng] = coords;
 
-                if (isNaN(lat) || isNaN(lng)) return null;
-
-                const siteName = site["Site Name"] || "Unknown Site";
-                const generationHeadroom = site["Generation Headroom Mw"];
+                // Validate that lat and lng are valid numbers
+                if (isNaN(lat) || isNaN(lng)) {
+                  return null;
+                }
 
                 return {
-                  id: `${siteName}-${index}`,
-                  position: [lat, lng],
-                  popupText: `${siteName} (${site["Site Type"] || "Unknown"})`,
-                  siteName: siteName,
+                  id: `${site["Site Name"] || "Site"}-${index}`,
+                  position: { lat, lng },
+                  popupText: site["Site Name"] || "Unknown Site",
+                  siteName: site["Site Name"] || "Unknown Site",
                   siteType: site["Site Type"] || "Unknown",
                   siteVoltage: site["Site Voltage"] || "Unknown",
                   county: site["County"] || "Unknown",
-                  generationHeadroom: generationHeadroom,
-                  color: getMarkerColor(generationHeadroom),
+                  generationHeadroom: site["Generation Headroom Mw"],
+                  licenceArea: site["Licence Area"] || "Unknown",
+                  color: getMarkerColor(site["Generation Headroom Mw"]),
                   ...site,
                 };
-              } catch (e) {
-                console.error("Error processing site coordinates:", site, e);
+              } catch (parseError) {
+                console.error("Error parsing coordinates:", parseError);
                 return null;
               }
             })
-            .filter((marker) => marker !== null);
+            .filter((marker) => marker !== null); // Remove null markers
 
-          setMarkers(transformedMarkers);
-          console.log("MapSection: Markers set:", transformedMarkers.length);
-        }
-
-        // Auto-fit map to markers
-        if (mapRef.current && markers.length > 0) {
-          const bounds = L.latLngBounds(
-            markers.map((marker) => marker.position)
+          console.log(
+            "Setting markers from client-side data:",
+            transformedMarkers
           );
-
-          setTimeout(() => {
-            if (mapRef.current) {
-              mapRef.current.fitBounds(bounds, {
-                padding: [20, 20],
-                maxZoom: 12,
-              });
-            }
-          }, 100);
+          setMarkers(transformedMarkers);
+          setLastSuccessfulMarkers(transformedMarkers);
+          setDataLoaded(true);
         }
       } catch (err) {
         if (err.name === "AbortError") {
@@ -314,8 +343,9 @@ const MapSection = ({
           return; // Exit early if request was cancelled
         }
 
-        console.error("MapSection: Error processing map data:", err);
-        setError("Failed to process map data: " + err.message);
+        console.error("MapSection: Error fetching map data:", err);
+        setError(err.message || "Failed to fetch map data");
+        setMarkers([]);
       } finally {
         setLoading(false);
       }
@@ -329,29 +359,21 @@ const MapSection = ({
         abortControllerRef.current.abort();
       }
     };
-  }, [data, filters, activeView]);
+  }, [data, activeView, filters]);
 
+  // Fallback mechanism: if markers are empty but we have successful markers, restore them
   useEffect(() => {
-    // Handle window resize
-    const handleResize = () => {
-      if (mapRef.current) {
-        setTimeout(() => {
-          mapRef.current.invalidateSize();
-        }, 100);
-      }
-    };
+    if (markers.length === 0 && lastSuccessfulMarkers.length > 0 && !loading && dataLoaded) {
+      console.log("MapSection: Restoring markers from last successful state");
+      setMarkers(lastSuccessfulMarkers);
+    }
+  }, [markers, lastSuccessfulMarkers, loading, dataLoaded]);
 
-    window.addEventListener("resize", handleResize);
-    handleResize();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+  console.log("MapSection rendering with markers:", markers);
 
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-white rounded-2xl shadow-lg">
+      <div className="w-full h-full flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
@@ -359,8 +381,11 @@ const MapSection = ({
 
   if (error) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-white rounded-2xl shadow-lg">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+      <div className="w-full h-full flex items-center justify-center">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
           <strong className="font-bold">Error! </strong>
           <span className="block sm:inline">{error}</span>
         </div>
@@ -368,93 +393,16 @@ const MapSection = ({
     );
   }
 
-  // Show "No sites match these filters" message when no markers
-  if (markers.length === 0 && !loading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-white rounded-2xl shadow-lg">
-        <div className="text-gray-600 text-center">
-          <p className="font-medium">No sites match these filters.</p>
-          <p className="text-sm mt-1">Try adjusting your filter criteria.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden h-full">
-      <div className="relative w-full h-full">
-        <MapContainer
-          center={[52.3, 0.1]}
-          zoom={8}
-          style={{ height: "100%", width: "100%" }}
-          eventHandlers={{
-            click: () => {
-              if (onMarkerClick) {
-                onMarkerClick(null);
-              }
-            },
-          }}
-          whenCreated={(map) => {
-            mapRef.current = map;
-          }}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-
-          {markers.map((marker) => (
-            <Marker
-              key={marker.id}
-              position={marker.position}
-              icon={createMarkerIcon(marker.color)}
-              eventHandlers={{
-                click: () => {
-                  if (onMarkerClick) {
-                    onMarkerClick(marker);
-                  }
-                },
-              }}
-            >
-              <Popup>
-                <div className="p-2">
-                  <h3 className="font-bold text-sm mb-1">{marker.siteName}</h3>
-                  {marker.generationHeadroom !== null &&
-                    marker.generationHeadroom !== undefined && (
-                      <p className="text-xs mt-1">
-                        <span className="font-medium">
-                          Generation Headroom:
-                        </span>{" "}
-                        <span
-                          className={
-                            marker.generationHeadroom >= 50
-                              ? "text-green-600"
-                              : marker.generationHeadroom >= 20
-                              ? "text-orange-500"
-                              : "text-red-600"
-                          }
-                        >
-                          {marker.generationHeadroom} MW
-                        </span>
-                      </p>
-                    )}
-                  {marker.siteVoltage && (
-                    <p className="text-xs mt-1">
-                      <span className="font-medium">Voltage:</span>{" "}
-                      {marker.siteVoltage} kV
-                    </p>
-                  )}
-                  {marker.county && (
-                    <p className="text-xs mt-1">
-                      <span className="font-medium">County:</span>{" "}
-                      {marker.county}
-                    </p>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+    <div className="w-full h-full" style={{ zIndex: "1" }}>
+      <div className="map-container relative w-full overflow-hidden h-[700px]">
+        <GoogleMapComponent
+          data={data}
+          filters={filters}
+          onMarkerClick={onMarkerClick}
+          activeView={activeView}
+          markers={markers}
+        />
       </div>
     </div>
   );

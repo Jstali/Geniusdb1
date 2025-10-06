@@ -221,11 +221,62 @@ const CustomChartBuilder = ({
 
       console.log("CustomChartBuilder: Data fetch completed successfully");
     } catch (err) {
-      setError("Failed to fetch data from database: " + err.message);
+      setError("CustomChartBuilder: Error fetching data: " + err.message);
       console.error("CustomChartBuilder: Error fetching data:", err);
     } finally {
       setLoading(false);
       console.log("CustomChartBuilder: Loading state set to false");
+    }
+  };
+
+  // New function to fetch chart data using the dedicated endpoint
+  const fetchChartData = async (xAxis, yAxis, chartType, filters = {}) => {
+    try {
+      setLoading(true);
+      setError("");
+      console.log("CustomChartBuilder: Fetching chart data with parameters:", {
+        xAxis,
+        yAxis,
+        chartType,
+        filters
+      });
+
+      const requestBody = {
+        x_axis: xAxis,
+        y_axis: yAxis,
+        chart_type: chartType,
+        filters: filters
+      };
+
+      const response = await fetch("/api/chart-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP error while fetching chart data! status: ${response.status}, message: ${errorText}`
+        );
+      }
+
+      const chartResult = await response.json();
+      console.log("Chart data fetch result:", chartResult);
+
+      if (chartResult.error) {
+        throw new Error(chartResult.error);
+      }
+
+      return chartResult.data;
+    } catch (err) {
+      setError("CustomChartBuilder: Error fetching chart data: " + err.message);
+      console.error("CustomChartBuilder: Error fetching chart data:", err);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -392,7 +443,7 @@ const CustomChartBuilder = ({
   ];
 
   // Handle chart generation
-  const generateChart = () => {
+  const generateChart = async () => {
     console.log("=== Generate Chart Called ===");
     console.log("Preset chart:", presetChart);
     console.log("Chart type:", chartTypeState);
@@ -406,14 +457,6 @@ const CustomChartBuilder = ({
       console.log(
         "Error: Not enough columns in this view to generate a chart."
       );
-      console.log("=========================");
-      return;
-    }
-
-    // Validation
-    if (!chartData || chartData.length === 0) {
-      setError("No data available to chart");
-      console.log("Error: No data available");
       console.log("=========================");
       return;
     }
@@ -452,200 +495,221 @@ const CustomChartBuilder = ({
 
     setError("");
 
-    // Find the actual keys for the selected headers
-    const xColumn = columnOptions.find((col) => col.accessorKey === xAxisState);
-    const yColumn = columnOptions.find((col) => col.accessorKey === yAxisState);
+    try {
+      // Try to use the new chart-data endpoint for better performance and filtering
+      let chartDataToUse = chartData;
+      
+      // If we have filters or want to use the dedicated endpoint, use it
+      if (Object.keys(filters).length > 0 || !chartData || chartData.length === 0) {
+        console.log("Using dedicated chart-data endpoint");
+        chartDataToUse = await fetchChartData(xAxisState, yAxisState, chartTypeState, filters);
+      }
 
-    const xKey = xColumn ? xColumn.accessorKey : xAxisState;
-    const yKey = yColumn ? yColumn.accessorKey : yAxisState;
+      if (!chartDataToUse || chartDataToUse.length === 0) {
+        setError("No data available to chart");
+        console.log("Error: No data available");
+        console.log("=========================");
+        return;
+      }
 
-    console.log("X key:", xKey);
-    console.log("Y key:", yKey);
+      // Find the actual keys for the selected headers
+      const xColumn = columnOptions.find((col) => col.accessorKey === xAxisState);
+      const yColumn = columnOptions.find((col) => col.accessorKey === yAxisState);
 
-    // Prepare data for plotting
-    let xValues = chartData.map((item) => item[xKey]);
-    let yValues =
-      chartTypeState !== "pie" ? chartData.map((item) => item[yKey]) : null;
+      const xKey = xColumn ? xColumn.accessorKey : xAxisState;
+      const yKey = yColumn ? yColumn.accessorKey : yAxisState;
 
-    console.log("X values:", xValues);
-    console.log("Y values:", yValues);
+      console.log("X key:", xKey);
+      console.log("Y key:", yKey);
 
-    // Convert to numbers where possible
-    if (yValues) {
-      yValues = yValues.map((val) => {
-        const num = parseFloat(val);
-        return isNaN(num) ? val : num;
-      });
-      console.log("Converted Y values:", yValues);
-    }
+      // Prepare data for plotting
+      let xValues = chartDataToUse.map((item) => item[xKey]);
+      let yValues =
+        chartTypeState !== "pie" ? chartDataToUse.map((item) => item[yKey]) : null;
 
-    // Create chart configuration
-    let chartConfig = {};
+      console.log("X values:", xValues);
+      console.log("Y values:", yValues);
 
-    switch (chartTypeState) {
-      case "bar":
-        chartConfig = {
-          data: [
-            {
-              x: xValues,
-              y: yValues,
-              type: "bar",
-              marker: { color: "#4f46e5" },
-            },
-          ],
-          layout: {
-            title: `${yColumn?.header || yAxisState} by ${
-              xColumn?.header || xAxisState
-            }`,
-            xaxis: { title: xColumn?.header || xAxisState },
-            yaxis: { title: yColumn?.header || yAxisState },
-          },
-        };
-        break;
+      // Convert to numbers where possible
+      if (yValues) {
+        yValues = yValues.map((val) => {
+          const num = parseFloat(val);
+          return isNaN(num) ? val : num;
+        });
+        console.log("Converted Y values:", yValues);
+      }
 
-      case "line":
-        chartConfig = {
-          data: [
-            {
-              x: xValues,
-              y: yValues,
-              type: "scatter",
-              mode: "lines+markers",
-              marker: { color: "#10b981" },
-              line: { color: "#10b981" },
-            },
-          ],
-          layout: {
-            title: `${yColumn?.header || yAxisState} by ${
-              xColumn?.header || xAxisState
-            }`,
-            xaxis: { title: xColumn?.header || xAxisState },
-            yaxis: { title: yColumn?.header || yAxisState },
-          },
-        };
-        break;
+      // Create chart configuration
+      let chartConfig = {};
 
-      case "scatter":
-        chartConfig = {
-          data: [
-            {
-              x: xValues,
-              y: yValues,
-              type: "scatter",
-              mode: "markers",
-              marker: {
-                color: "#8b5cf6",
-                size: 8,
+      switch (chartTypeState) {
+        case "bar":
+          chartConfig = {
+            data: [
+              {
+                x: xValues,
+                y: yValues,
+                type: "bar",
+                marker: { color: "#4f46e5" },
               },
+            ],
+            layout: {
+              title: `${yColumn?.header || yAxisState} by ${
+                xColumn?.header || xAxisState
+              }`,
+              xaxis: { title: xColumn?.header || xAxisState },
+              yaxis: { title: yColumn?.header || yAxisState },
             },
-          ],
-          layout: {
-            title: `${yColumn?.header || yAxisState} by ${
-              xColumn?.header || xAxisState
-            }`,
-            xaxis: { title: xColumn?.header || xAxisState },
-            yaxis: { title: yColumn?.header || yAxisState },
-          },
-        };
-        break;
+          };
+          break;
 
-      case "pie":
-        // For pie charts, we need to aggregate data by unique x values
-        const aggregatedData = {};
-        xValues.forEach((x, i) => {
-          if (!aggregatedData[x]) {
-            aggregatedData[x] = 0;
-          }
-          // Try to convert to number if possible, otherwise count occurrences
-          const yVal = chartData[i][yKey];
-          if (yVal !== undefined && yVal !== null) {
-            const num = parseFloat(yVal);
-            if (!isNaN(num)) {
-              aggregatedData[x] += num;
+        case "line":
+          chartConfig = {
+            data: [
+              {
+                x: xValues,
+                y: yValues,
+                type: "scatter",
+                mode: "lines+markers",
+                marker: { color: "#10b981" },
+                line: { color: "#10b981" },
+              },
+            ],
+            layout: {
+              title: `${yColumn?.header || yAxisState} by ${
+                xColumn?.header || xAxisState
+              }`,
+              xaxis: { title: xColumn?.header || xAxisState },
+              yaxis: { title: yColumn?.header || yAxisState },
+            },
+          };
+          break;
+
+        case "scatter":
+          chartConfig = {
+            data: [
+              {
+                x: xValues,
+                y: yValues,
+                type: "scatter",
+                mode: "markers",
+                marker: {
+                  color: "#8b5cf6",
+                  size: 8,
+                },
+              },
+            ],
+            layout: {
+              title: `${yColumn?.header || yAxisState} by ${
+                xColumn?.header || xAxisState
+              }`,
+              xaxis: { title: xColumn?.header || xAxisState },
+              yaxis: { title: yColumn?.header || yAxisState },
+            },
+          };
+          break;
+
+        case "pie":
+          // For pie charts, we need to aggregate data by unique x values
+          const aggregatedData = {};
+          xValues.forEach((x, i) => {
+            if (!aggregatedData[x]) {
+              aggregatedData[x] = 0;
+            }
+            // Try to convert to number if possible, otherwise count occurrences
+            const yVal = chartDataToUse[i][yKey];
+            if (yVal !== undefined && yVal !== null) {
+              const num = parseFloat(yVal);
+              if (!isNaN(num)) {
+                aggregatedData[x] += num;
+              } else {
+                aggregatedData[x] += 1;
+              }
             } else {
               aggregatedData[x] += 1;
             }
-          } else {
-            aggregatedData[x] += 1;
-          }
-        });
+          });
 
-        chartConfig = {
-          data: [
-            {
-              labels: Object.keys(aggregatedData),
-              values: Object.values(aggregatedData),
-              type: "pie",
-              marker: {
-                colors: [
-                  "#4f46e5",
-                  "#10b981",
-                  "#8b5cf6",
-                  "#f59e0b",
-                  "#ef4444",
-                  "#06b6d4",
-                  "#8b5cf6",
-                  "#ec4899",
-                ],
+          chartConfig = {
+            data: [
+              {
+                labels: Object.keys(aggregatedData),
+                values: Object.values(aggregatedData),
+                type: "pie",
+                marker: {
+                  colors: [
+                    "#4f46e5",
+                    "#10b981",
+                    "#8b5cf6",
+                    "#f59e0b",
+                    "#ef4444",
+                    "#06b6d4",
+                    "#8b5cf6",
+                    "#ec4899",
+                  ],
+                },
               },
+            ],
+            layout: {
+              title: `Distribution of ${xColumn?.header || xAxisState}`,
             },
-          ],
-          layout: {
-            title: `Distribution of ${xColumn?.header || xAxisState}`,
-          },
-        };
-        break;
+          };
+          break;
 
-      case "histogram":
-        // Filter out non-numeric values for histogram
-        const numericYValues = yValues.filter(
-          (val) => typeof val === "number" && !isNaN(val)
-        );
-        if (numericYValues.length === 0) {
-          setError("No numeric data available for histogram");
-          console.log("Error: No numeric data for histogram");
-          console.log("=========================");
-          return;
-        }
+        case "histogram":
+          // Filter out non-numeric values for histogram
+          const numericYValues = yValues.filter(
+            (val) => typeof val === "number" && !isNaN(val)
+          );
+          if (numericYValues.length === 0) {
+            setError("No numeric data available for histogram");
+            console.log("Error: No numeric data for histogram");
+            console.log("=========================");
+            return;
+          }
 
-        chartConfig = {
-          data: [
-            {
-              x: numericYValues,
-              type: "histogram",
-              marker: { color: "#f59e0b" },
+          chartConfig = {
+            data: [
+              {
+                x: numericYValues,
+                type: "histogram",
+                marker: { color: "#f59e0b" },
+              },
+            ],
+            layout: {
+              title: `Distribution of ${yColumn?.header || yAxisState}`,
+              xaxis: { title: yColumn?.header || yAxisState },
+              yaxis: { title: "Frequency" },
             },
-          ],
-          layout: {
-            title: `Distribution of ${yColumn?.header || yAxisState}`,
-            xaxis: { title: yColumn?.header || yAxisState },
-            yaxis: { title: "Frequency" },
-          },
-        };
-        break;
+          };
+          break;
 
-      default:
-        chartConfig = {
-          data: [
-            {
-              x: xValues,
-              y: yValues,
-              type: "bar",
+        default:
+          chartConfig = {
+            data: [
+              {
+                x: xValues,
+                y: yValues,
+                type: "bar",
+              },
+            ],
+            layout: {
+              title: `${yColumn?.header || yAxisState} by ${
+                xColumn?.header || xAxisState
+              }`,
+              xaxis: { title: xColumn?.header || xAxisState },
+              yaxis: { title: yColumn?.header || yAxisState },
             },
-          ],
-          layout: {
-            title: `${yColumn?.header || yAxisState} by ${
-              xColumn?.header || xAxisState
-            }`,
-            xaxis: { title: xColumn?.header || xAxisState },
-            yaxis: { title: yColumn?.header || yAxisState },
-          },
-        };
+          };
+      }
+
+      console.log("Generated chart config:", chartConfig);
+      console.log("=========================");
+      setGeneratedChart(chartConfig);
+    } catch (error) {
+      console.error("Error generating chart:", error);
+      setError("Failed to generate chart: " + error.message);
     }
-
-    console.log("Generated chart config:", chartConfig);
-    console.log("=========================");
-    setGeneratedChart(chartConfig);
   };
 
   // Generate a preset chart

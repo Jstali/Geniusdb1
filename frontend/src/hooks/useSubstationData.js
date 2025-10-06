@@ -21,8 +21,8 @@ export const useSubstationData = () => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
-        setSubstations(data);
+        const result = await response.json();
+        setData(result);
         setError(null);
       } catch (err) {
         console.error("Error fetching substation data:", err);

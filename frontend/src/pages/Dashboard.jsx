@@ -14,7 +14,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Home");
   const [allColumns, setAllColumns] = useState([]);
-  const [activeView, setActiveView] = useState(null); // Track active view
 
   // View management state
   const [tableViewConfig, setTableViewConfig] = useState({
@@ -60,14 +59,26 @@ const Dashboard = () => {
     console.log("=== Dashboard: handleViewLoad called ===");
     console.log("View config:", viewConfig);
 
-    // Update table view configuration
+    // Update table view configuration with enhanced state
     if (viewConfig.tableView) {
-      setTableViewConfig({
+      const newTableViewConfig = {
         ...tableViewConfig,
         ...viewConfig.tableView,
         activeView: viewConfig.viewName || null, // Set active view
-      });
-      console.log("Table view config updated:", viewConfig.tableView);
+        // Ensure all enhanced fields are included
+        selectedColumns: viewConfig.tableView.selectedColumns || [],
+        filters: viewConfig.tableView.filters || {},
+        sortBy: viewConfig.tableView.sortBy || [],
+        sortDirection: viewConfig.tableView.sortDirection || "asc",
+        pageSize: viewConfig.tableView.pageSize || 10,
+        currentPage: viewConfig.tableView.currentPage || 1,
+      };
+      console.log("Enhanced table view config updated:", newTableViewConfig);
+      console.log("Selected columns:", newTableViewConfig.selectedColumns);
+      console.log("Filters:", newTableViewConfig.filters);
+      console.log("Sort config:", { sortBy: newTableViewConfig.sortBy, sortDirection: newTableViewConfig.sortDirection });
+      console.log("Pagination config:", { pageSize: newTableViewConfig.pageSize, currentPage: newTableViewConfig.currentPage });
+      setTableViewConfig(newTableViewConfig);
     }
 
     // Update chart view configuration
@@ -76,9 +87,10 @@ const Dashboard = () => {
       console.log("Chart view config updated:", viewConfig.chartView);
     }
 
-    // Set active view
-    if (viewConfig.viewName) {
-      setActiveView(viewConfig.viewName);
+    // Update map view configuration (if provided)
+    if (viewConfig.mapView) {
+      console.log("Map view config updated:", viewConfig.mapView);
+      // Map view configuration will be handled by the map components
     }
 
     console.log("=== Dashboard: handleViewLoad completed ===");
@@ -91,7 +103,7 @@ const Dashboard = () => {
           <HomePage
             tableViewConfig={{
               ...tableViewConfig,
-              activeView: activeView, // Pass active view to HomePage
+              // activeView is already in tableViewConfig
             }}
             setTableViewConfig={setTableViewConfig}
             chartViewConfig={chartViewConfig}
@@ -101,7 +113,14 @@ const Dashboard = () => {
       case "Summary":
         return <SummaryPage />;
       case "Map View":
-        return <MapView activeView={activeView} />; // Pass active view to MapView
+        console.log("=== Dashboard: Rendering MapView ===");
+        console.log("activeView:", tableViewConfig?.activeView);
+        console.log("tableViewConfig:", tableViewConfig);
+        console.log("selectedColumns being passed:", tableViewConfig?.selectedColumns || []);
+        return <MapView 
+          activeView={tableViewConfig?.activeView || null} 
+          selectedColumns={tableViewConfig?.selectedColumns || []} 
+        />; // Pass active view and selected columns to MapView
       case "Table View":
         return <TableView />;
       case "Charts":
@@ -172,7 +191,7 @@ const Dashboard = () => {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         className={
-          activeTab === "Home" ? "fixed top-16 left-0 right-0 z-10" : ""
+          activeTab === "Home" ? "fixed top-20 left-0 right-0 z-10" : ""
         }
         onViewLoad={handleViewLoad}
         currentTableView={tableViewConfig}
@@ -186,7 +205,7 @@ const Dashboard = () => {
           activeTab === "Charts"
             ? "pb-16"
             : ""
-        } ${activeTab === "Home" ? "pt-32" : "mt-4"}`}
+        } ${activeTab === "Home" ? "pt-36" : "mt-4"}`}
         key={activeTab}
         variants={pageVariants}
         initial="initial"

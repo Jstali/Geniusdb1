@@ -36,6 +36,77 @@ body {
   z-index: 1;
 }
 
+/* Light dark map border styles */
+.map-container {
+  border: 2px solid #9ca3af !important; /* Lighter gray border */
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 0.5rem !important;
+}
+
+.map-container:hover {
+  border-color: #6b7280 !important; /* Slightly darker on hover */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Enhanced border for site details components */
+.site-details-container {
+  border: 2px solid #9ca3af !important; /* Lighter gray border */
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 0.5rem !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  border-style: solid !important;
+}
+
+.site-details-container:hover {
+  border-color: #6b7280 !important; /* Slightly darker on hover */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Table container border styling */
+.table-container {
+  border: 2px solid #9ca3af !important; /* Lighter gray border */
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 0.5rem !important;
+}
+
+.table-container:hover {
+  border-color: #6b7280 !important; /* Slightly darker on hover */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Ensure no other styles override the border */
+.site-details-container * {
+  box-sizing: border-box !important;
+}
+
+/* Equal height for filter and site details panels */
+.sidebar-panel {
+  height: 700px !important; /* Match map height */
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.sidebar-panel .site-details-container,
+.sidebar-panel .map-container {
+  height: 100% !important;
+  flex: 1 !important;
+}
+
+/* For flexbox layout (HomePage) - ensure equal heights */
+.flex-layout .shrink-0 {
+  height: 600px !important; /* Match the h-[600px] from HomePage */
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.flex-layout .shrink-0 .site-details-container,
+.flex-layout .shrink-0 .map-container {
+  height: 100% !important;
+  flex: 1 !important;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .home-page-map {

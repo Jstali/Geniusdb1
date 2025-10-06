@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
-import CompactLeafletMap from "../components/CompactLeafletMap";
+import CompactGoogleMapSimple from "../components/CompactGoogleMapSimple";
 import SidebarFilters from "../components/SidebarFilters";
 import SiteDetailsPanel from "../components/SiteDetailsPanel";
 import DataTable from "../components/DataTable";
 // Removed CustomChartBuilder import
+import { getActiveData, extractMapMarkers } from "../lib/filterUtils";
+
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 const HomePage = ({
   tableViewConfig = {
-    selectedColumns: [],
+    selectedColumns: [], // Empty array means all columns visible by default
     filters: {},
   },
   setTableViewConfig = () => {},
@@ -23,13 +26,51 @@ const HomePage = ({
   const [error, setError] = useState(null);
   const [columns, setColumns] = useState([]);
   const [selectedSite, setSelectedSite] = useState(null);
+  const [filteredTableData, setFilteredTableData] = useState([]); // Add state for filtered table data
+  const [tableFilters, setTableFilters] = useState({}); // Add state for table filters
+  const [activeData, setActiveData] = useState([]); // Add state for active filtered dataset
   const [filters, setFilters] = useState({
     siteName: "",
     voltage: "",
     powerRange: { min: 0 },
     operators: "",
   });
-  const [activeView, setActiveView] = useState(null); // Track active view
+  // Get activeView from tableViewConfig instead of maintaining separate state
+  const activeView = tableViewConfig?.activeView || null;
+
+  // Compute activeData whenever view configuration or data changes
+  useEffect(() => {
+    console.log("HomePage: Computing activeData", {
+      dataLength: data.length,
+      tableViewConfig,
+      activeView,
+      selectedColumns: tableViewConfig?.selectedColumns,
+      filters: tableViewConfig?.filters
+    });
+
+    if (data.length > 0) {
+      const computedActiveData = getActiveData(data, {
+        selectedColumns: tableViewConfig?.selectedColumns || [],
+        filters: tableViewConfig?.filters || {}
+      });
+      
+      console.log("HomePage: Computed activeData", {
+        originalDataLength: data.length,
+        activeDataLength: computedActiveData.length,
+        sampleActiveData: computedActiveData.slice(0, 3)
+      });
+      
+      setActiveData(computedActiveData);
+    } else {
+      console.log("HomePage: No data available, setting activeData to empty array");
+      setActiveData([]);
+    }
+  }, [data, tableViewConfig?.selectedColumns, tableViewConfig?.filters, activeView]);
+
+  console.log("HomePage received props:", { tableViewConfig, chartViewConfig });
+  console.log("HomePage activeView:", activeView);
+  console.log("HomePage selectedColumns:", tableViewConfig?.selectedColumns);
+  console.log("HomePage tableViewConfig.filters:", tableViewConfig?.filters);
 
   // Fetch data from the same endpoint as TableView
   useEffect(() => {
@@ -38,44 +79,49 @@ const HomePage = ({
         setLoading(true);
         console.log("Fetching transformer data...");
 
-        // First, trigger the data processing script
-        const processResponse = await fetch("/process/transformers");
-        if (!processResponse.ok) {
-          throw new Error(
-            `HTTP error while processing data! status: ${processResponse.status}`
-          );
-        }
-        const processResult = await processResponse.json();
-        if (processResult.status === "error") {
-          throw new Error(processResult.message);
-        }
-        console.log("Data processing result:", processResult);
+        // Use the transformers endpoint to get all data with all columns
+        const res = await fetch(`${API_BASE}/data/transformers`);
 
-        // Then fetch the transformer data from the backend API
-        const response = await fetch("/data/transformers");
-        if (!response.ok) {
-          throw new Error(
-            `HTTP error while fetching data! status: ${response.status}`
-          );
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
         }
-        const jsonData = await response.json();
-        console.log("Fetched transformer data:", jsonData.length, "records");
-        console.log("Sample data:", jsonData.slice(0, 3));
 
-        // Set the transformer data directly
-        setData(jsonData);
+        const json = await res.json();
+        console.log("HomePage: Received transformer data", json);
 
-        // Generate columns dynamically from the data
-        if (jsonData.length > 0) {
-          const keys = Object.keys(jsonData[0]);
-          const cols = keys.map((k) => ({
-            accessorKey: k,
-            header: String(k)
-              .replace(/_/g, " ")
-              .replace(/\b\w/g, (c) => c.toUpperCase()),
-          }));
-          setColumns(cols);
+        if (Array.isArray(json)) {
+          setData(json);
+
+          // Generate columns dynamically from the data
+          if (json.length > 0) {
+            // Use the first row to determine column names
+            const firstRow = json[0];
+            const keys = Object.keys(firstRow);
+            const cols = keys.map((k) => ({
+              accessorKey: k,
+              header: String(k)
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase()),
+            }));
+            setColumns(cols);
+
+            // Update tableViewConfig to show all columns if none are selected
+            // Only set if currently empty or not set
+            if (
+              !tableViewConfig?.selectedColumns ||
+              tableViewConfig.selectedColumns.length === 0
+            ) {
+              setTableViewConfig({
+                ...tableViewConfig,
+                selectedColumns: keys, // Show all columns by default
+              });
+            }
+          } else {
+            setColumns([]);
+          }
         } else {
+          setData([]);
+          setError("Unexpected data format from backend");
           setColumns([]);
         }
       } catch (err) {
@@ -104,10 +150,7 @@ const HomePage = ({
       console.log("Applying view filters:", tableViewConfig.filters);
     }
 
-    // Set active view when tableViewConfig changes
-    if (tableViewConfig?.activeView) {
-      setActiveView(tableViewConfig.activeView);
-    }
+    // activeView is now derived from tableViewConfig, no need to set it
   }, [tableViewConfig]);
 
   // Handle column selection changes
@@ -117,6 +160,28 @@ const HomePage = ({
       ...tableViewConfig,
       selectedColumns,
     });
+  };
+
+  // Handle filtered data changes from DataTable
+  const handleFilteredDataChange = (filteredData) => {
+    console.log("HomePage: Received filtered data from DataTable", {
+      originalDataLength: data.length,
+      filteredDataLength: filteredData.length,
+      sampleData: filteredData.slice(0, 3)
+    });
+    setFilteredTableData(filteredData);
+  };
+
+  // Handle filter changes from DataTable
+  const handleFiltersChange = (filters) => {
+    console.log("HomePage: Received filter changes from DataTable", filters);
+    setTableFilters(filters);
+    
+    // Update tableViewConfig with current filters
+    setTableViewConfig(prev => ({
+      ...prev,
+      filters: filters
+    }));
   };
 
   // Calculate summary statistics
@@ -175,12 +240,17 @@ const HomePage = ({
     operators: filters.operators,
   };
 
+  // Note: filteredDataForMap logic removed - now using activeData for all components
+
+  console.log("HomePage rendering with data:", data);
+  console.log("HomePage activeData:", activeData);
+
   return (
     <div className="flex flex-col h-full pt-4 transition-all duration-300">
       {/* Top section with map and panels */}
-      <div className="flex gap-4 h-[600px] mb-6 transition-all duration-300">
+      <div className="flex gap-4 h-[600px] mb-6 transition-all duration-300 flex-layout">
         {/* Left panel - Filters */}
-        <div className="w-64 shrink-0 transition-all duration-300 hover:shadow-xl">
+        <div className="w-80 shrink-0 transition-all duration-300 hover:shadow-xl">
           <SidebarFilters
             onSiteNameSearch={(name) =>
               setFilters({ ...filters, siteName: name })
@@ -200,14 +270,15 @@ const HomePage = ({
 
         {/* Center - Map with extra width */}
         <div className="flex-grow transition-all duration-300">
-          <div className="h-full rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
-            <CompactLeafletMap
+          <div className="h-full rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl relative">
+            <CompactGoogleMapSimple
               isHomePage={true}
-              data={data}
+              data={activeData.length > 0 ? activeData : data} // Use activeData if available, otherwise fallback to raw data
               filters={mapFilters}
               selectedColumns={tableViewConfig?.selectedColumns || []}
               onMarkerClick={handleMarkerClick}
               activeView={activeView} // Pass active view to map component
+              locationColumn={tableViewConfig?.mapConfig?.locationColumn || "Site Name"}
             />
           </div>
         </div>
@@ -223,7 +294,7 @@ const HomePage = ({
       </div>
 
       {/* Bottom section - Table (removed chart section) */}
-      <div className="flex-grow bg-white rounded-lg shadow-lg p-4 transition-all duration-300 hover:shadow-xl">
+      <div className="flex-grow bg-white rounded-lg shadow-lg p-4 transition-all duration-300 hover:shadow-xl table-container">
         {loading ? (
           <div className="w-full h-64 flex items-center justify-center">
             <div className="text-gray-600">Loading data...</div>
@@ -233,12 +304,18 @@ const HomePage = ({
             <div className="text-red-600">{error}</div>
           </div>
         ) : (
-          <DataTable
-            data={data}
-            columns={columns}
-            selectedColumns={tableViewConfig?.selectedColumns || []}
-            onSelectedColumnsChange={handleSelectedColumnsChange}
-          />
+        <DataTable
+          key={`table-${activeView || 'default'}-${JSON.stringify(tableViewConfig?.selectedColumns || [])}`} // Force re-render when view changes
+          data={activeData.length > 0 ? activeData : data} // Use activeData if available, otherwise fallback to raw data
+          columns={columns}
+          selectedColumns={tableViewConfig?.selectedColumns || []} // Pass empty array when no columns selected
+          onSelectedColumnsChange={handleSelectedColumnsChange}
+          onFilteredDataChange={handleFilteredDataChange} // Pass handler for filtered data changes
+          onFiltersChange={handleFiltersChange} // Pass handler for filter changes
+          initialFilters={tableViewConfig?.filters || {}} // Pass initial filters from saved view
+          initialSortConfig={tableViewConfig?.sortBy ? { sortBy: tableViewConfig.sortBy, sortDirection: tableViewConfig.sortDirection } : null} // Pass initial sort config
+          initialPaginationConfig={tableViewConfig?.pageSize ? { pageSize: tableViewConfig.pageSize, currentPage: tableViewConfig.currentPage } : null} // Pass initial pagination config
+        />
         )}
       </div>
     </div>

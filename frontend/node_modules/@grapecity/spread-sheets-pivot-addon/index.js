@@ -1,0 +1,1 @@
+require('./dist/gc.spread.pivot.pivottables.min.js');

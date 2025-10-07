@@ -38,9 +38,9 @@ const HomePageMap = ({
   const [selectedSite, setSelectedSite] = useState(null);
   const [filters, setFilters] = useState({
     siteName: "",
-    voltage: [],
+    voltage: "",
     powerRange: { min: 0, max: 200 },
-    operators: [],
+    operators: "",
   });
   const [voltageLevels, setVoltageLevels] = useState([]);
   const [operators, setOperators] = useState([]);
@@ -140,23 +140,27 @@ const HomePageMap = ({
 
       // Voltage filter
       if (
-        filters.voltage.length > 0 &&
-        !filters.voltage.includes(site.site_voltage)
+        filters.voltage &&
+        filters.voltage !== "" &&
+        String(site.site_voltage) !== String(filters.voltage)
       )
         return false;
 
-      // Power range filter
+      // Power range filter - use min value for >= comparison
       if (
         site.generation_headroom !== null &&
-        site.generation_headroom !== undefined
+        site.generation_headroom !== undefined &&
+        filters.powerRange.min !== undefined &&
+        filters.powerRange.min > 0
       ) {
-        if (site.generation_headroom > filters.powerRange.max) return false;
+        if (site.generation_headroom < filters.powerRange.min) return false;
       }
 
       // Operator filter
       if (
-        filters.operators.length > 0 &&
-        !filters.operators.includes(site.licence_area)
+        filters.operators &&
+        filters.operators !== "" &&
+        site.licence_area !== filters.operators
       )
         return false;
 

@@ -14,9 +14,9 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     siteName: "",
-    voltage: [],
+    voltage: "",
     powerRange: { min: 0, max: 200 },
-    operators: [],
+    operators: "",
   });
   const [selectedSite, setSelectedSite] = useState(null);
 
@@ -38,6 +38,8 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
   }, [data, selectedColumns]);
 
   useEffect(() => {
+    console.log("MapView: useEffect triggered with dependencies:", { activeView, selectedColumns, filters });
+    
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -50,41 +52,19 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
           const backendFilters = {};
           
           if (filters.siteName && filters.siteName.trim() !== "") {
-            backendFilters.site_name = [{
-              op: "contains",
-              value: filters.siteName.trim()
-            }];
+            backendFilters.site_name = filters.siteName.trim();
           }
           
-          if (filters.voltage && filters.voltage.length > 0) {
-            backendFilters.voltage_level = [{
-              op: "in",
-              value: filters.voltage
-            }];
+          if (filters.voltage && filters.voltage !== "") {
+            backendFilters.voltage_level = filters.voltage;
           }
           
-          if (filters.powerRange && (filters.powerRange.min !== undefined || filters.powerRange.max !== undefined)) {
-            const conditions = [];
-            if (filters.powerRange.min !== undefined) {
-              conditions.push({
-                op: ">=",
-                value: filters.powerRange.min
-              });
-            }
-            if (filters.powerRange.max !== undefined) {
-              conditions.push({
-                op: "<=",
-                value: filters.powerRange.max
-              });
-            }
-            backendFilters.available_power = conditions;
+          if (filters.powerRange && filters.powerRange.min !== undefined && filters.powerRange.min > 0) {
+            backendFilters.available_power = filters.powerRange.min;
           }
           
-          if (filters.operators && filters.operators.length > 0) {
-            backendFilters.network_operator = [{
-              op: "in",
-              value: filters.operators
-            }];
+          if (filters.operators && filters.operators !== "") {
+            backendFilters.network_operator = filters.operators;
           }
           
           return backendFilters;
@@ -130,6 +110,7 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
 
         const json = await res.json();
         console.log("MapView: Received map data", json);
+        console.log("MapView: Number of rows received:", json.rows ? json.rows.length : 0);
 
         if (json.rows && Array.isArray(json.rows)) {
           // Transform the data to match the expected format with proper numeric parsing
@@ -205,14 +186,14 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
   }, [data]);
 
   const voltageLevels = useMemo(() => {
-    if (!data || data.length === 0) return [20, 22, 33, 66, 132];
+    if (!data || data.length === 0) return [];
     return [...new Set(data.map((s) => s["Site Voltage"]))]
       .filter(Boolean)
       .sort((a, b) => a - b);
   }, [data]);
 
   const operators = useMemo(() => {
-    if (!data || data.length === 0) return ["EPN", "LPN", "SPN"];
+    if (!data || data.length === 0) return [];
     return [...new Set(data.map((s) => s["Licence Area"]))]
       .filter(Boolean)
       .sort();
@@ -250,18 +231,22 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
           {/* Left Sidebar - Filters */}
           <div className="lg:col-span-4 sidebar-panel">
             <SidebarFilters
-              onSiteNameSearch={(name) =>
-                setFilters((f) => ({ ...f, siteName: name }))
-              }
-              onVoltageFilter={(voltage) =>
-                setFilters((f) => ({ ...f, voltage }))
-              }
-              onPowerRangeChange={(range) =>
-                setFilters((f) => ({ ...f, powerRange: range }))
-              }
-              onOperatorFilter={(ops) =>
-                setFilters((f) => ({ ...f, operators: ops }))
-              }
+              onSiteNameSearch={(name) => {
+                console.log("MapView: Site name filter changed to:", name);
+                setFilters((f) => ({ ...f, siteName: name }));
+              }}
+              onVoltageFilter={(voltage) => {
+                console.log("MapView: Voltage filter changed to:", voltage);
+                setFilters((f) => ({ ...f, voltage }));
+              }}
+              onPowerRangeChange={(range) => {
+                console.log("MapView: Power range filter changed to:", range);
+                setFilters((f) => ({ ...f, powerRange: range }));
+              }}
+              onOperatorFilter={(ops) => {
+                console.log("MapView: Operator filter changed to:", ops);
+                setFilters((f) => ({ ...f, operators: ops }));
+              }}
               voltageLevels={voltageLevels}
               operators={operators}
               currentFilters={filters}
@@ -271,8 +256,9 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
           {/* Center Map */}
           <div className="lg:col-span-4">
             <div className="h-[700px]">
+              {console.log("MapView: Passing data to MapSection:", { dataLength: data.length, filters, activeView, selectedColumns })}
               <MapSection
-                data={activeData} // Use activeData instead of raw data
+                data={data} // Use raw data, let MapSection handle filtering
                 filters={filters}
                 onMarkerClick={handleMarkerClick}
                 activeView={activeView} // Pass active view to MapSection

@@ -1,11 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
-/* Import Inter font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-/* Import Handsontable styles */
-@import "handsontable/dist/handsontable.full.css";
 
 body {
   margin: 0;

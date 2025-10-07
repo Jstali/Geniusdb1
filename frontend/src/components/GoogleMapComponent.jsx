@@ -200,12 +200,14 @@ const GoogleMapComponent = ({
       isHomePage,
       activeView
     });
+    console.log("GoogleMapComponent: Sample marker IDs:", markers.slice(0, 3).map(m => m.id));
   }, [markers, externalMarkers, processedMarkers, showMarkers, mapLoaded, isHomePage, activeView]);
 
   // Effect to handle marker rendering when map is loaded
   useEffect(() => {
     if (mapLoaded && map && markers.length > 0 && showMarkers) {
       console.log("GoogleMapComponent: Map loaded and markers available, count:", markers.length);
+      console.log("GoogleMapComponent: Force re-render triggered");
       setMarkersInitialized(true);
       // Markers will be rendered by the JSX conditional rendering
     } else if (markers.length === 0 && markersInitialized) {

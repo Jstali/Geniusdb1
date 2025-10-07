@@ -299,6 +299,13 @@ const ViewManagementModal = ({
       return true;
     }
 
+    // For histograms, X-axis should ideally be numeric
+    if (chartConfig.type === "histogram") {
+      // In a real implementation, we would check if the X-axis column is numeric
+      // For now, we'll assume it's valid
+      return true;
+    }
+
     return true;
   };
 
@@ -547,6 +554,7 @@ const ViewManagementModal = ({
                         <option value="line">Line</option>
                         <option value="pie">Pie</option>
                         <option value="scatter">Scatter</option>
+                        <option value="histogram">Histogram</option>
                       </select>
                     </div>
                     <div>

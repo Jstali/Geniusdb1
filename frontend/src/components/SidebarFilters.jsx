@@ -14,7 +14,7 @@ const SidebarFilters = ({
   currentFilters = {
     siteName: "",
     voltage: "",
-    powerRange: { min: 0 },
+    powerRange: { min: 0, max: 200 },
     operators: "",
   },
 }) => {
@@ -83,10 +83,10 @@ const SidebarFilters = ({
             </select>
           </div>
 
-          {/* Available Power Range Slider */}
+          {/* Available Power Range Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Available Power (MW) &ge;
+              Available Power (MW)
             </label>
             <input
               type="number"
@@ -97,6 +97,7 @@ const SidebarFilters = ({
               value={currentFilters.powerRange?.min ?? 0}
               onChange={(e) => handlePowerRangeChange(e.target.value)}
             />
+            <p className="text-xs text-gray-500 mt-1">Show sites with power ≥ this value</p>
           </div>
 
           {/* Network Operators Filter */}

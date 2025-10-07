@@ -51,35 +51,90 @@ const CompactGoogleMapSimple = ({
     locationColumn
   });
 
-  // Process data prop to create markers
+  // Apply filters to data and create markers
+  const filteredData = useMemo(() => {
+    console.log("CompactGoogleMapSimple: Applying filters", {
+      originalDataLength: data.length,
+      filters,
+      sampleFilters: filters
+    });
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    let filtered = [...data];
+
+    // Apply site name filter
+    if (filters.siteName && filters.siteName.trim() !== "") {
+      const searchTerm = filters.siteName.toLowerCase();
+      filtered = filtered.filter(site => {
+        const siteName = site.site_name || site["Site Name"] || "";
+        return siteName.toLowerCase().includes(searchTerm);
+      });
+      console.log("CompactGoogleMapSimple: After site name filter:", filtered.length);
+    }
+
+    // Apply voltage filter
+    if (filters.voltage && filters.voltage !== "") {
+      filtered = filtered.filter(site => {
+        const siteVoltage = site.site_voltage || site["Site Voltage"];
+        return String(siteVoltage) === String(filters.voltage);
+      });
+      console.log("CompactGoogleMapSimple: After voltage filter:", filtered.length);
+    }
+
+    // Apply power range filter
+    if (filters.powerRange && filters.powerRange.min !== undefined && filters.powerRange.min > 0) {
+      filtered = filtered.filter(site => {
+        const headroom = parseFloat(site.generation_headroom || site["Generation Headroom Mw"] || 0);
+        return headroom >= filters.powerRange.min;
+      });
+      console.log("CompactGoogleMapSimple: After power range filter:", filtered.length);
+    }
+
+    // Apply operator filter
+    if (filters.operators && filters.operators !== "") {
+      filtered = filtered.filter(site => {
+        const operator = site.licence_area || site["Licence Area"];
+        return operator === filters.operators;
+      });
+      console.log("CompactGoogleMapSimple: After operator filter:", filtered.length);
+    }
+
+    console.log("CompactGoogleMapSimple: Final filtered data length:", filtered.length);
+    return filtered;
+  }, [data, filters]);
+
+  // Process filtered data to create markers
   useEffect(() => {
-    console.log("CompactGoogleMapSimple: Processing data prop", {
-      dataLength: data.length,
+    console.log("CompactGoogleMapSimple: Processing filtered data", {
+      filteredDataLength: filteredData.length,
       activeView,
       selectedColumns,
       locationColumn,
-      sampleData: data.slice(0, 2)
+      sampleData: filteredData.slice(0, 2)
     });
 
-    if (data && data.length > 0) {
-      console.log("CompactGoogleMapSimple: Sample data structure:", {
-        firstRow: data[0],
-        firstRowKeys: data[0] ? Object.keys(data[0]) : [],
-        hasLatitude: data[0]?.latitude !== undefined,
-        hasLongitude: data[0]?.longitude !== undefined,
-        hasSpatialCoordinates: data[0]?.["Spatial Coordinates"] !== undefined
+    if (filteredData && filteredData.length > 0) {
+      console.log("CompactGoogleMapSimple: Sample filtered data structure:", {
+        firstRow: filteredData[0],
+        firstRowKeys: filteredData[0] ? Object.keys(filteredData[0]) : [],
+        hasLatitude: filteredData[0]?.latitude !== undefined,
+        hasLongitude: filteredData[0]?.longitude !== undefined,
+        hasSpatialCoordinates: filteredData[0]?.["Spatial Coordinates"] !== undefined
       });
 
-      const processedMarkers = extractMapMarkers(data, locationColumn);
-      console.log("CompactGoogleMapSimple: Processed markers from data prop:", processedMarkers.length);
+      const processedMarkers = extractMapMarkers(filteredData, locationColumn);
+      console.log("CompactGoogleMapSimple: Processed markers from filtered data:", processedMarkers.length);
       setMarkers(processedMarkers);
       setLoading(false);
     } else {
-      console.log("CompactGoogleMapSimple: No data provided, clearing markers");
+      console.log("CompactGoogleMapSimple: No filtered data, clearing markers");
       setMarkers([]);
       setLoading(false);
     }
-  }, [data, locationColumn, activeView, selectedColumns]);
+  }, [filteredData, locationColumn, activeView, selectedColumns]);
 
   // Handle marker click
   const handleMarkerClick = (marker) => {

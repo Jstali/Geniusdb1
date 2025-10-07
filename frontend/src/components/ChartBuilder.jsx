@@ -254,6 +254,8 @@ const ChartBuilder = ({ data = [] }) => {
               <option value="bar">Bar Chart</option>
               <option value="line">Line Chart</option>
               <option value="pie">Pie Chart</option>
+              <option value="scatter">Scatter Plot</option>
+              <option value="histogram">Histogram</option>
             </select>
           </div>
 

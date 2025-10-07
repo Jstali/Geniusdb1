@@ -240,6 +240,8 @@ const HomePage = ({
     operators: filters.operators,
   };
 
+  console.log("HomePage: mapFilters updated:", mapFilters);
+
   // Note: filteredDataForMap logic removed - now using activeData for all components
 
   console.log("HomePage rendering with data:", data);
@@ -252,16 +254,22 @@ const HomePage = ({
         {/* Left panel - Filters */}
         <div className="w-80 shrink-0 transition-all duration-300 hover:shadow-xl">
           <SidebarFilters
-            onSiteNameSearch={(name) =>
-              setFilters({ ...filters, siteName: name })
-            }
-            onVoltageFilter={(voltage) => setFilters({ ...filters, voltage })}
-            onPowerRangeChange={(range) => {
-              setFilters({ ...filters, powerRange: range });
+            onSiteNameSearch={(name) => {
+              console.log("HomePage: Site name filter changed to:", name);
+              setFilters((f) => ({ ...f, siteName: name }));
             }}
-            onOperatorFilter={(operator) =>
-              setFilters({ ...filters, operators: operator })
-            }
+            onVoltageFilter={(voltage) => {
+              console.log("HomePage: Voltage filter changed to:", voltage);
+              setFilters((f) => ({ ...f, voltage }));
+            }}
+            onPowerRangeChange={(range) => {
+              console.log("HomePage: Power range filter changed to:", range);
+              setFilters((f) => ({ ...f, powerRange: range }));
+            }}
+            onOperatorFilter={(operator) => {
+              console.log("HomePage: Operator filter changed to:", operator);
+              setFilters((f) => ({ ...f, operators: operator }));
+            }}
             voltageLevels={voltageLevels}
             operators={operators}
             currentFilters={filters}
@@ -271,6 +279,14 @@ const HomePage = ({
         {/* Center - Map with extra width */}
         <div className="flex-grow transition-all duration-300">
           <div className="h-full rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl relative">
+            {console.log("HomePage: Passing data to CompactGoogleMapSimple:", {
+              dataLength: (activeData.length > 0 ? activeData : data).length,
+              activeDataLength: activeData.length,
+              rawDataLength: data.length,
+              mapFilters,
+              selectedColumns: tableViewConfig?.selectedColumns || [],
+              activeView
+            })}
             <CompactGoogleMapSimple
               isHomePage={true}
               data={activeData.length > 0 ? activeData : data} // Use activeData if available, otherwise fallback to raw data

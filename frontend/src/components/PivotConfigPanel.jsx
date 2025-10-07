@@ -143,17 +143,21 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
       console.log("No selections made, initializing with defaults");
       if (columnOptions.length > 0) {
         const defaultState = getDefaultState();
+        
+        // Update state for UI consistency
         setRows(defaultState.rows);
         setColumnsFields(defaultState.columnsFields);
         setValues(defaultState.values);
         setAggregations(defaultState.aggregations);
         
-        // Use the default values for generation
+        // Use the default values for generation (don't wait for state updates)
         const config = {
           rows: defaultState.rows,
           columns: defaultState.columnsFields,
-          values: defaultState.values,
-          aggregations: defaultState.aggregations,
+          values: defaultState.values.map((value, index) => ({
+            field: value,
+            aggregation: defaultState.aggregations[index] || "SUM",
+          })),
         };
         
         console.log("Using default configuration:", config);

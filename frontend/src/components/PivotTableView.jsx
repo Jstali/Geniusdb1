@@ -84,7 +84,7 @@ const convertToColumns = (data) => {
   }));
 };
 
-const PivotTableView = ({ data }) => {
+const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
   // Only use provided data, don't fallback to sample data
   // const rowData = useMemo(() => {
   //   if (data && data.length > 0) {
@@ -105,6 +105,10 @@ const PivotTableView = ({ data }) => {
   // State to track if pivot table has been generated
   const [isGenerated, setIsGenerated] = useState(false);
 
+  // Use external pivotConfig if provided, otherwise use internal state
+  const effectivePivotConfig = externalPivotConfig || pivotConfig;
+  const effectiveIsGenerated = externalPivotConfig ? true : isGenerated;
+
   // State for generated pivot data
   const [generatedPivotData, setGeneratedPivotData] = useState([]);
 
@@ -112,15 +116,17 @@ const PivotTableView = ({ data }) => {
   useEffect(() => {
     console.log("=== PIVOT TABLE VIEW: useEffect triggered ===");
     console.log("useEffect dependencies:", {
-      pivotConfig: pivotConfig,
+      pivotConfig: effectivePivotConfig,
+      externalPivotConfig: externalPivotConfig,
+      internalPivotConfig: pivotConfig,
       dataLength: data?.length || 0,
-      isGenerated: isGenerated
+      isGenerated: effectiveIsGenerated
     });
     
-    if (pivotConfig && data && data.length > 0) {
-      console.log("useEffect: Generating pivot data with config:", pivotConfig);
+    if (effectivePivotConfig && data && data.length > 0) {
+      console.log("useEffect: Generating pivot data with config:", effectivePivotConfig);
       try {
-        const newPivotData = generatePivotData(data, pivotConfig);
+        const newPivotData = generatePivotData(data, effectivePivotConfig);
         setGeneratedPivotData(newPivotData);
         console.log("useEffect: Pivot data generated successfully, rows:", newPivotData.length);
       } catch (error) {
@@ -131,7 +137,7 @@ const PivotTableView = ({ data }) => {
       console.log("useEffect: Skipping data generation - missing requirements");
       setGeneratedPivotData([]);
     }
-  }, [pivotConfig, data]);
+  }, [effectivePivotConfig, data]);
 
   // Function to generate pivot data
   const generatePivotData = (data, config) => {
@@ -416,7 +422,7 @@ const PivotTableView = ({ data }) => {
   return (
     <div className="rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
       {/* Use the PivotConfigPanel component */}
-      {data && data.length > 0 && !isGenerated && (
+      {data && data.length > 0 && !effectiveIsGenerated && (
         <PivotConfigPanel
           columns={columns}
           onDataGenerate={handleDataGenerate}
@@ -425,7 +431,7 @@ const PivotTableView = ({ data }) => {
       )}
 
       {/* Export buttons - only show when there's data and pivot table is generated */}
-      {isGenerated && generatedPivotData.length > 0 && (
+      {effectiveIsGenerated && generatedPivotData.length > 0 && (
         <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-end space-x-2">
           <button
             onClick={exportToCSV}
@@ -443,7 +449,7 @@ const PivotTableView = ({ data }) => {
       )}
 
       {/* Message when no data or not generated */}
-      {data && data.length > 0 && !isGenerated && (
+      {data && data.length > 0 && !effectiveIsGenerated && (
         <div className="p-8 text-center text-gray-500">
           <p>
             Configure the pivot table above and click &quot;Generate Pivot
@@ -453,7 +459,7 @@ const PivotTableView = ({ data }) => {
       )}
 
       {/* Message when no data available after generation */}
-      {data && data.length > 0 && isGenerated && generatedPivotData.length === 0 && (
+      {data && data.length > 0 && effectiveIsGenerated && generatedPivotData.length === 0 && (
         <div className="p-8 text-center text-gray-500">
           <p>
             No data available for the selected options. Please try different
@@ -463,7 +469,7 @@ const PivotTableView = ({ data }) => {
       )}
 
       {/* Handsontable component - only show when there's data to display */}
-      {isGenerated && generatedPivotData.length > 0 && (
+      {effectiveIsGenerated && generatedPivotData.length > 0 && (
         <HotTable ref={hotTableRef} settings={hotSettings} />
       )}
     </div>
@@ -472,6 +478,7 @@ const PivotTableView = ({ data }) => {
 
 PivotTableView.propTypes = {
   data: PropTypes.array,
+  pivotConfig: PropTypes.object,
 };
 
 export default PivotTableView;

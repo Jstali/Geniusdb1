@@ -98,6 +98,7 @@ const DataTable = ({
   const [openDropdowns, setOpenDropdowns] = useState({});
   const [columnMultiSelectValues, setColumnMultiSelectValues] = useState({});
   const [showColumnToggle, setShowColumnToggle] = useState(false);
+  const showColumnToggleRef = useRef(false);
   // Pivot table state
   const [isPivotMode, setIsPivotMode] = useState(false);
   const [pivotConfig, setPivotConfig] = useState(null);
@@ -167,6 +168,8 @@ const DataTable = ({
       setColumnVisibility(visibility);
     }
   }, [columns, selectedColumns]);
+
+  // Don't notify parent immediately to prevent re-renders that close the popup
 
   // Custom column visibility handler that also notifies parent
   const handleColumnVisibilityChange = (updater) => {
@@ -529,17 +532,13 @@ const DataTable = ({
         }
       });
 
-      if (
-        columnToggleRef.current &&
-        !columnToggleRef.current.contains(event.target)
-      ) {
-        setShowColumnToggle(false);
-      }
+      // Don't auto-close the column toggle popup - let user close it manually
+      // This prevents the annoying auto-close behavior when selecting columns
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     };
   }, []);
 
@@ -761,7 +760,11 @@ const DataTable = ({
           {/* Column Visibility Toggle */}
           <div className="relative" ref={columnToggleRef}>
             <button
-              onClick={() => setShowColumnToggle(!showColumnToggle)}
+              onClick={() => {
+                const newState = !showColumnToggleRef.current;
+                showColumnToggleRef.current = newState;
+                setShowColumnToggle(newState);
+              }}
               className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Columns
@@ -773,10 +776,27 @@ const DataTable = ({
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="p-2 max-h-60 overflow-y-auto">
-                  <div className="pb-2 border-b border-gray-200 mb-2">
+                  <div className="pb-2 border-b border-gray-200 mb-2 flex justify-between items-center">
                     <p className="text-sm font-medium text-gray-700">
                       Toggle Columns
                     </p>
+                    <button
+                      onClick={() => {
+                        // Apply changes when closing
+                        if (onSelectedColumnsChange && columnVisibility) {
+                          const visibleColumns = Object.keys(columnVisibility).filter(
+                            (key) => columnVisibility[key]
+                          );
+                          onSelectedColumnsChange(visibleColumns);
+                        }
+                        showColumnToggleRef.current = false;
+                        setShowColumnToggle(false);
+                      }}
+                      className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                      title="Close and Apply"
+                    >
+                      ×
+                    </button>
                   </div>
                   {/* Select All / Deselect All buttons */}
                   <div className="flex space-x-2 mb-2 pb-2 border-b border-gray-200">
@@ -788,7 +808,7 @@ const DataTable = ({
                         table.getAllLeafColumns().forEach((column) => {
                           newVisibility[column.id] = true;
                         });
-                        handleColumnVisibilityChange(newVisibility);
+                        setColumnVisibility(newVisibility);
                       }}
                       className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
                     >
@@ -806,7 +826,7 @@ const DataTable = ({
                           newVisibility[column.id] = index === 0;
                         });
 
-                        handleColumnVisibilityChange(newVisibility);
+                        setColumnVisibility(newVisibility);
                       }}
                       className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200"
                     >
@@ -824,7 +844,12 @@ const DataTable = ({
                         checked={column.getIsVisible()}
                         onChange={(e) => {
                           e.stopPropagation();
-                          column.getToggleVisibilityHandler()(e);
+                          // Use a custom handler that doesn't trigger parent callbacks immediately
+                          const newVisibility = {
+                            ...columnVisibility,
+                            [column.id]: e.target.checked
+                          };
+                          setColumnVisibility(newVisibility);
                         }}
                         className="mr-2 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />

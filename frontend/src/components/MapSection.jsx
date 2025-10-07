@@ -61,7 +61,13 @@ const MapSection = ({
   // Get API base URL from environment or default to localhost:8000
   const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
-  console.log("MapSection received props:", { data, filters, activeView });
+  console.log("MapSection received props:", { 
+    dataLength: data?.length || 0, 
+    filters, 
+    activeView,
+    selectedColumns: selectedColumns?.length || 0,
+    dataSample: data?.slice(0, 2)
+  });
 
   // Convert frontend filters to backend format
   const convertFilters = (frontendFilters) => {
@@ -69,33 +75,26 @@ const MapSection = ({
 
     // Site Name filter
     if (frontendFilters.siteName && frontendFilters.siteName.trim() !== "") {
-      backendFilters["site_name"] = [
-        { op: "contains", value: frontendFilters.siteName.trim() },
-      ];
+      backendFilters["site_name"] = frontendFilters.siteName.trim();
     }
 
     // Voltage Level filter
-    if (frontendFilters.voltage && frontendFilters.voltage.length > 0) {
-      backendFilters["voltage_level"] = [
-        { op: "in", value: frontendFilters.voltage },
-      ];
+    if (frontendFilters.voltage && frontendFilters.voltage !== "") {
+      backendFilters["voltage_level"] = frontendFilters.voltage;
     }
 
-    // Available Power filter
+    // Available Power filter - use min value for >= comparison
     if (
       frontendFilters.powerRange &&
-      frontendFilters.powerRange.max !== undefined
+      frontendFilters.powerRange.min !== undefined &&
+      frontendFilters.powerRange.min > 0
     ) {
-      backendFilters["available_power"] = [
-        { op: ">", value: frontendFilters.powerRange.max },
-      ];
+      backendFilters["available_power"] = frontendFilters.powerRange.min;
     }
 
     // Network Operator filter
-    if (frontendFilters.operators && frontendFilters.operators.length > 0) {
-      backendFilters["network_operator"] = [
-        { op: "in", value: frontendFilters.operators },
-      ];
+    if (frontendFilters.operators && frontendFilters.operators !== "") {
+      backendFilters["network_operator"] = frontendFilters.operators;
     }
 
     return backendFilters;
@@ -218,121 +217,57 @@ const MapSection = ({
           setLastSuccessfulMarkers(transformedMarkers);
           setDataLoaded(true);
         } else {
-          // Fallback to client-side filtering if no active view
+          // Data comes from MapView with filters already applied, so use it directly
           console.log(
-            "MapSection: Processing map data with client-side filters...",
+            "MapSection: Using data from MapView (already filtered)",
             {
-              filters,
               dataLength: data.length,
+              dataKeys: data.length > 0 ? Object.keys(data[0]) : [],
             }
           );
 
-          // Apply filters to the data
-          const filteredData = data.filter((site) => {
-            // Site name filter
-            if (filters.siteName && filters.siteName.trim() !== "") {
-              const siteName = site["Site Name"] || "";
-              if (
-                !siteName.toLowerCase().includes(filters.siteName.toLowerCase())
-              ) {
-                return false;
-              }
-            }
-
-            // Voltage filter
-            if (filters.voltage && filters.voltage.length > 0) {
-              const siteVoltage = site["Site Voltage"];
-              if (siteVoltage && !filters.voltage.includes(siteVoltage)) {
-                return false;
-              }
-            }
-
-            // Power range filter
-            if (filters.powerRange) {
-              const headroom = site["Generation Headroom Mw"];
-              if (
-                headroom !== undefined &&
-                headroom !== null &&
-                !isNaN(headroom)
-              ) {
-                if (headroom > filters.powerRange.max) {
-                  return false;
-                }
-              }
-            }
-
-            // Operator filter
-            if (filters.operators && filters.operators.length > 0) {
-              const licenceArea = site["Licence Area"];
-              if (licenceArea && !filters.operators.includes(licenceArea)) {
-                return false;
-              }
-            }
-
-            // Check if site has valid coordinates
-            const spatialCoords = site["Spatial Coordinates"];
-            if (!spatialCoords || spatialCoords === "\\N") {
-              return false;
-            }
-
-            return true;
-          });
-
-          console.log("Filtered data count:", filteredData.length);
-
-          // Transform the filtered data into markers with proper numeric parsing
-          const transformedMarkers = filteredData
+          // Transform the data into markers (no additional filtering needed)
+          const transformedMarkers = data
             .map((site, index) => {
-              // Get spatial coordinates (format: "lat, lng")
-              const spatialCoords = site["Spatial Coordinates"];
-              if (!spatialCoords || spatialCoords === "\\N") {
+              // Get coordinates directly from the data
+              const lat = site.latitude;
+              const lng = site.longitude;
+
+              console.log(`Processing site ${index}:`, {
+                siteName: site["Site Name"] || site.site_name,
+                lat,
+                lng,
+                isValid: !(!lat || !lng || isNaN(lat) || isNaN(lng))
+              });
+
+              // Validate that lat and lng are valid numbers
+              if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+                console.log(`Skipping site ${index} - invalid coordinates:`, { lat, lng });
                 return null;
               }
 
-              try {
-                // Parse coordinates (format: "lat, lng")
-                const coords = spatialCoords
-                  .split(",")
-                  .map((coord) => parseFloat(coord.trim()));
-                if (
-                  coords.length !== 2 ||
-                  isNaN(coords[0]) ||
-                  isNaN(coords[1])
-                ) {
-                  return null;
-                }
-
-                const [lat, lng] = coords;
-
-                // Validate that lat and lng are valid numbers
-                if (isNaN(lat) || isNaN(lng)) {
-                  return null;
-                }
-
-                return {
-                  id: `${site["Site Name"] || "Site"}-${index}`,
-                  position: { lat, lng },
-                  popupText: site["Site Name"] || "Unknown Site",
-                  siteName: site["Site Name"] || "Unknown Site",
-                  siteType: site["Site Type"] || "Unknown",
-                  siteVoltage: site["Site Voltage"] || "Unknown",
-                  county: site["County"] || "Unknown",
-                  generationHeadroom: site["Generation Headroom Mw"],
-                  licenceArea: site["Licence Area"] || "Unknown",
-                  color: getMarkerColor(site["Generation Headroom Mw"]),
-                  ...site,
-                };
-              } catch (parseError) {
-                console.error("Error parsing coordinates:", parseError);
-                return null;
-              }
+              return {
+                id: `${site["Site Name"] || site.site_name || "Site"}-${index}`,
+                position: { lat, lng },
+                popupText: site["Site Name"] || site.site_name || "Unknown Site",
+                siteName: site["Site Name"] || site.site_name || "Unknown Site",
+                siteType: site["Site Type"] || site.site_type || "Unknown",
+                siteVoltage: site["Site Voltage"] || site.site_voltage || "Unknown",
+                county: site["County"] || site.county || "Unknown",
+                generationHeadroom: site["Generation Headroom Mw"] || site.generation_headroom,
+                licenceArea: site["Licence Area"] || site.licence_area || "Unknown",
+                color: getMarkerColor(site["Generation Headroom Mw"] || site.generation_headroom),
+                ...site,
+              };
             })
             .filter((marker) => marker !== null); // Remove null markers
 
           console.log(
-            "Setting markers from client-side data:",
-            transformedMarkers
+            "Setting markers from backend data:",
+            transformedMarkers.length,
+            "markers"
           );
+          console.log("Sample marker IDs:", transformedMarkers.slice(0, 3).map(m => m.id));
           setMarkers(transformedMarkers);
           setLastSuccessfulMarkers(transformedMarkers);
           setDataLoaded(true);
@@ -397,6 +332,7 @@ const MapSection = ({
     <div className="w-full h-full" style={{ zIndex: "1" }}>
       <div className="map-container relative w-full overflow-hidden h-[700px]">
         <GoogleMapComponent
+          key={`map-${markers.length}`}
           data={data}
           filters={filters}
           onMarkerClick={onMarkerClick}

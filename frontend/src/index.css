@@ -1,23 +1,52 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #1a202c;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);
+  background-attachment: fixed;
   color: #e2e8f0;
+}
+
+/* Glassmorphism utility classes */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
 }
 
 /* Home page map container */
 .home-page-map {
   width: 100%;
-  height: 600px; /* Reduced from 1125px to 600px */
-  min-height: 600px; /* Reduced from 1125px to 600px */
+  height: 600px;
+  min-height: 600px;
   max-width: 1200px;
   margin: 0 auto;
   position: relative;
@@ -27,48 +56,61 @@ body {
 .home-page-map-container {
   width: 100%;
   height: 100%;
-  min-height: 600px; /* Reduced from 1125px to 600px */
+  min-height: 600px;
   z-index: 1;
 }
 
-/* Light dark map border styles */
+/* Glassmorphic map border styles */
 .map-container {
-  border: 2px solid #9ca3af !important; /* Lighter gray border */
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04) !important;
-  border-radius: 0.5rem !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37) !important;
+  border-radius: 1rem !important;
+  transition: all 0.3s ease !important;
 }
 
 .map-container:hover {
-  border-color: #6b7280 !important; /* Slightly darker on hover */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.4) !important;
+  transform: translateY(-2px) !important;
 }
 
-/* Enhanced border for site details components */
+/* Enhanced glassmorphic site details components */
 .site-details-container {
-  border: 2px solid #9ca3af !important; /* Lighter gray border */
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04) !important;
-  border-radius: 0.5rem !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37) !important;
+  border-radius: 1rem !important;
   position: relative !important;
   box-sizing: border-box !important;
   outline: none !important;
-  border-style: solid !important;
+  transition: all 0.3s ease !important;
 }
 
 .site-details-container:hover {
-  border-color: #6b7280 !important; /* Slightly darker on hover */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.4) !important;
+  transform: translateY(-2px) !important;
 }
 
-/* Table container border styling */
+/* Table container glassmorphic styling */
 .table-container {
-  border: 2px solid #9ca3af !important; /* Lighter gray border */
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04) !important;
-  border-radius: 0.5rem !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37) !important;
+  border-radius: 1rem !important;
+  transition: all 0.3s ease !important;
 }
 
 .table-container:hover {
-  border-color: #6b7280 !important; /* Slightly darker on hover */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.4) !important;
 }
 
 /* Ensure no other styles override the border */
@@ -102,6 +144,241 @@ body {
   flex: 1 !important;
 }
 
+/* Fix layout spacing issues */
+.flex-layout {
+  gap: 1.5rem !important;
+}
+
+/* Ensure proper z-index for fixed elements */
+.fixed {
+  z-index: 50 !important;
+}
+
+/* Fix table container positioning */
+.table-container {
+  margin-top: 1.5rem !important;
+  z-index: 10 !important;
+}
+
+/* Fix panel overlaps */
+.panel-container {
+  position: relative;
+  z-index: 20;
+}
+
+/* Ensure proper spacing between main sections */
+.main-content {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+/* Fix navigation spacing */
+.nav-container {
+  gap: 1rem;
+}
+
+/* Ensure proper button alignment */
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Fix map container visibility */
+.map-container {
+  position: relative !important;
+  z-index: 1 !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Ensure proper layout flow */
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Fix content area spacing */
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Fix panel spacing */
+.panel-spacing {
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+/* Ensure map visibility */
+.map-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+}
+
+/* Homepage specific improvements */
+.homepage-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  gap: 2rem;
+}
+
+.homepage-main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  flex: 1;
+}
+
+@media (min-width: 1024px) {
+  .homepage-main-content {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+/* Panel improvements */
+.homepage-panel {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.homepage-panel:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Table improvements */
+.homepage-table-container {
+  min-height: 500px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Compact layout for better balance */
+.compact-panels-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.compact-panels-layout .panels-section {
+  height: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .compact-panels-layout .panels-section {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.compact-panels-layout .table-section {
+  flex: 1;
+  min-height: 500px;
+}
+
+/* Three-panel layout improvements */
+.three-panel-layout {
+  display: flex;
+  flex-direction: column;
+  height: 450px;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .three-panel-layout {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+/* Equal height panels */
+.equal-height-panels {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.equal-height-panels .panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Panel spacing */
+.panel-gap {
+  gap: 1.5rem;
+}
+
+/* Responsive panel widths - Compact */
+.panel-left, .panel-right {
+  width: 100%;
+  max-width: 320px; /* xl:w-80 */
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .panel-left, .panel-right {
+    width: 288px; /* lg:w-72 */
+  }
+}
+
+@media (min-width: 1280px) {
+  .panel-left, .panel-right {
+    width: 320px; /* xl:w-80 */
+  }
+}
+
+.panel-center {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Filter spacing improvements */
+.filter-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+}
+
+.filter-section {
+  margin-bottom: 1.5rem;
+}
+
+.filter-section:last-child {
+  margin-bottom: 1rem;
+}
+
+.filter-label {
+  margin-bottom: 0.75rem;
+}
+
+.filter-input {
+  padding: 0.75rem 1rem;
+}
+
+.filter-description {
+  margin-top: 0.5rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .home-page-map {
@@ -109,12 +386,48 @@ body {
   }
 }
 
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.5);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.8);
+}
+
 @layer base {
   * {
-    @apply border-gray-200;
+    @apply border-violet-500/20;
   }
   body {
-    @apply bg-gray-900 text-gray-200;
-    font-family: 'Inter', sans-serif;
+    @apply text-gray-100;
+    font-family: 'Inter', 'Poppins', sans-serif;
   }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', 'Inter', sans-serif;
+  }
+}
+
+/* Glow effects for buttons and interactive elements */
+.btn-glow {
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-glow:hover {
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.6);
+  transform: translateY(-2px);
 }

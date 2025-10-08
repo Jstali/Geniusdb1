@@ -1211,10 +1211,6 @@ const CustomChartBuilder = ({
     <div className="w-full">
       <div className="mb-4">
         <h2 className="text-xl font-bold text-gray-800 mb-2">Chart Builder</h2>
-        <p className="text-gray-600 text-sm">
-          Build custom charts from your data. Select a chart type and configure
-          the axes.
-        </p>
       </div>
 
       {error && (

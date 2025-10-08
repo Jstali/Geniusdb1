@@ -3,7 +3,7 @@ import React from "react";
 const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
   if (!selectedSite) {
     return (
-      <div className="site-details-container bg-white p-6 h-full overflow-y-auto">
+      <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-semibold text-gray-800">Site Details</h3>
           <button
@@ -14,41 +14,41 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
           </button>
         </div>
 
-        <div className="text-center py-8">
+        <div className="">
           <p className="text-gray-500">
             Select a marker on the map to view details
           </p>
         </div>
 
         {summaryStats && (
-          <div className="mt-6">
+          <div className="">
             <h4 className="font-medium text-gray-700 mb-4">
               Summary Statistics
             </h4>
-            <div className="space-y-3">
+            <div className="">
               <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
                 <span className="text-sm text-gray-600">
                   Total Substations:
                 </span>
-                <span className="text-sm text-gray-800 font-medium">
+                <span className="">
                   {summaryStats.totalSubstations}
                 </span>
               </div>
-              <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
-                <span className="text-sm text-gray-600">Avg. Headroom:</span>
+              <div className="">
+                <span className="">Avg. Headroom:</span>
                 <span className="text-sm font-medium">
                   {summaryStats.avgHeadroom?.toFixed(2) || "N/A"} MW
                 </span>
               </div>
-              <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
-                <span className="text-sm text-gray-600">
+              <div className="">
+                <span className="">
                   Green Sites (≥50MW):
                 </span>
-                <span className="text-sm font-medium">
+                <span className="">
                   {summaryStats.greenSites || 0}
                 </span>
               </div>
-              <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
+              <div className="">
                 <span className="text-sm text-gray-600">
                   Amber Sites (20-50MW):
                 </span>
@@ -56,7 +56,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
                   {summaryStats.amberSites || 0}
                 </span>
               </div>
-              <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
+              <div className="">
                 <span className="text-sm text-gray-600">
                   Red Sites (&lt;20MW):
                 </span>

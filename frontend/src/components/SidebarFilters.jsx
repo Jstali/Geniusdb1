@@ -37,28 +37,30 @@ const SidebarFilters = ({
   };
 
   return (
-    <div className="map-container bg-white p-6 h-full overflow-y-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+    <div className="h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
+              Filters
+            </h3>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-gray-500 hover:text-gray-700 transition-colors duration-200 md:hidden"
+          className="text-gray-300 hover:text-violet-400 transition-colors duration-200 md:hidden"
         >
           {isCollapsed ? ">>" : "<<"}
         </button>
       </div>
 
       {!isCollapsed && (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-4">
           {/* Search by Site Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div> 
+            <label className=" ">
               Search by Site Name
-            </label>
+              </label>
             <input
               type="text"
               placeholder="Enter site name..."
-              className="w-full px-3 py-2 border text-gray-600 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="w-full px-4 py-2.5 bg-white/10 border border-violet-500/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 backdrop-blur-sm hover:bg-white/15"
               onChange={handleSiteNameChange}
               value={currentFilters.siteName || ""}
             />
@@ -66,17 +68,17 @@ const SidebarFilters = ({
 
           {/* Voltage Level Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="">
               Voltage Level
             </label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="w-full px-4 py-2.5 bg-white/10 border border-violet-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 backdrop-blur-sm hover:bg-white/15"
               value={currentFilters.voltage || ""}
               onChange={handleVoltageChange}
             >
-              <option value="">All Voltage Levels</option>
+              <option value="" className="bg-slate-800">All Voltage Levels</option>
               {voltageLevels.map((voltage) => (
-                <option key={voltage} value={voltage}>
+                <option key={voltage} value={voltage} className="bg-slate-800">
                   {voltage} kV
                 </option>
               ))}
@@ -85,7 +87,7 @@ const SidebarFilters = ({
 
           {/* Available Power Range Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="">
               Available Power (MW)
             </label>
             <input
@@ -93,26 +95,26 @@ const SidebarFilters = ({
               min="0"
               step="1"
               placeholder="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="w-full px-4 py-2.5 bg-white/10 border border-violet-500/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 backdrop-blur-sm hover:bg-white/15"
               value={currentFilters.powerRange?.min ?? 0}
               onChange={(e) => handlePowerRangeChange(e.target.value)}
             />
-            <p className="text-xs text-gray-500 mt-1">Show sites with power ≥ this value</p>
+            <p className="text-xs text-gray-400 mt-1.5">Show sites with power ≥ this value</p>
           </div>
 
           {/* Network Operators Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="">
               Network Operator
             </label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="w-full px-4 py-2.5 bg-white/10 border border-violet-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 backdrop-blur-sm hover:bg-white/15"
               value={currentFilters.operators || ""}
               onChange={handleOperatorChange}
             >
-              <option value="">All Operators</option>
+              <option value="" className="bg-slate-800">All Operators</option>
               {operators.map((operator) => (
-                <option key={operator} value={operator}>
+                <option key={operator} value={operator} className="bg-slate-800">
                   {operator}
                 </option>
               ))}

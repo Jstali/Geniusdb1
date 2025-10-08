@@ -20,7 +20,7 @@ const Header = ({
   onViewLoad = null, // Add onViewLoad prop
 }) => {
   return (
-    <header className={`w-full px-6 py-4 shadow-md bg-white ${className}`}>
+    <header className={`w-full px-6 py-4 backdrop-blur-xl bg-white/5 border-b border-violet-500/20 shadow-glow ${className}`}>
       <div className="max-w-full mx-auto">
         <div className="flex items-center justify-between">
           {/* Left: Title */}
@@ -28,9 +28,11 @@ const Header = ({
             <img 
               src="/geniusdb2.png" 
               alt="Genius DB Logo" 
-              className="w-16 h-16 mr-3 object-contain"
+              className="w-16 h-16 mr-3 object-contain drop-shadow-lg"
             />
-            <h1 className="text-2xl font-bold text-blue-600">GeniusDB</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
+              GeniusDB
+            </h1>
           </div>
 
           {/* Right: children or logout */}
@@ -38,12 +40,12 @@ const Header = ({
             {children ? (
               children
             ) : (
-              <div className="flex items-center">
+              <div className="flex items-center gap-4">
                 {onViewLoad && <SavedViewsDropdown onLoadView={onViewLoad} />}
                 {onLogout ? (
                   <button
                     onClick={onLogout}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition ml-2"
+                    className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 font-medium whitespace-nowrap"
                   >
                     Logout
                   </button>
@@ -52,26 +54,6 @@ const Header = ({
             )}
           </div>
         </div>
-
-        {/* Mobile nav: stack below title (or horizontal scroll) */}
-        <nav className="sm:hidden mt-3 flex gap-3 flex-wrap">
-          {menu.map((item) => {
-            const isActive = item === active;
-            return (
-              <button
-                key={item}
-                onClick={() => onNavigate(item)}
-                className={`${
-                  isActive
-                    ? "bg-blue-600 text-white px-4 py-2 rounded-lg shadow"
-                    : "text-gray-600 hover:text-blue-600 transition px-3 py-2"
-                }`}
-              >
-                {item}
-              </button>
-            );
-          })}
-        </nav>
       </div>
     </header>
   );

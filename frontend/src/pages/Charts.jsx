@@ -54,7 +54,7 @@ const Charts = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-500"></div>
       </div>
     );
   }
@@ -62,7 +62,7 @@ const Charts = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+        <div className="glass-card bg-red-500/10 border-red-500/30 text-red-300 px-4 py-3 rounded-xl">
           <strong className="font-bold">Error! </strong>
           <span className="block sm:inline">{error}</span>
         </div>
@@ -72,14 +72,18 @@ const Charts = () => {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Charts</h1>
-        <p className="text-gray-600">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent mb-3">
+          Charts
+        </h1>
+        <p className="text-gray-300 text-lg">
           Build custom charts from your data. Select a chart type and configure
           the axes.
         </p>
       </div>
-      <CustomChartBuilder data={data} columns={columns} />
+      <div className="glass-card p-6">
+        <CustomChartBuilder data={data} columns={columns} />
+      </div>
     </div>
   );
 };

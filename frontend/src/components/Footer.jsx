@@ -3,17 +3,17 @@ import React from "react";
 const Footer = ({ className = "", showButtons = true }) => {
   return (
     <footer
-      className={`bg-white border-t border-gray-200 py-3 px-6 ${className}`}
+      className={`backdrop-blur-xl bg-white/5 border-t border-violet-500/20 py-4 px-6 ${className}`}
     >
       {showButtons && (
-        <div className="flex justify-end space-x-3">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition text-sm font-medium">
+        <div className="flex flex-wrap justify-end items-center gap-3">
+          <button className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 font-medium whitespace-nowrap">
             Save
           </button>
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition text-sm font-medium">
+          <button className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 font-medium whitespace-nowrap">
             Load
           </button>
-          <button className="px-4 py-2 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition text-sm font-medium">
+          <button className="px-5 py-2.5 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 font-medium whitespace-nowrap">
             Reset
           </button>
         </div>

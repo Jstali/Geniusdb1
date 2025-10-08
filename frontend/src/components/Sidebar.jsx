@@ -19,17 +19,17 @@ const Sidebar = ({
 
   return (
     <>
-      <aside className={`bg-white shadow-md overflow-x-auto z-10 ${className}`}>
-        <nav className="px-6 py-4 flex justify-between items-center">
-          <ul className="flex space-x-4">
+      <aside className={`backdrop-blur-xl bg-white/5 border-b border-violet-500/20 shadow-glow overflow-x-auto z-10 ${className}`}>
+        <nav className="px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+          <ul className="flex flex-wrap gap-4">
             {menuItems.map((item) => (
               <li key={item}>
                 <button
                   onClick={() => setActiveTab(item)}
-                  className={`px-5 py-2.5 text-base rounded-lg transition-all duration-300 whitespace-nowrap transform hover:scale-105 hover:shadow-md ${
+                  className={`px-5 py-2.5 text-base rounded-lg transition-all duration-300 whitespace-nowrap hover:scale-105 ${
                     activeTab === item
-                      ? "bg-blue-600 text-white font-semibold shadow-lg"
-                      : "text-gray-600 hover:bg-gray-100 font-medium"
+                      ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold shadow-glow"
+                      : "text-gray-300 hover:bg-white/10 font-medium hover:text-violet-400 hover:shadow-glow-sm"
                   }`}
                 >
                   {item}
@@ -40,7 +40,7 @@ const Sidebar = ({
           {activeTab === "Home" && (
             <button
               onClick={() => setIsViewManagerOpen(true)}
-              className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition text-sm font-semibold"
+              className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 font-semibold whitespace-nowrap"
             >
               View Management
             </button>

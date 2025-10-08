@@ -9,6 +9,7 @@ import MapView from "./MapView";
 import TableView from "../components/TableView";
 import CustomChartBuilder from "../components/CustomChartBuilder";
 import SummaryPage from "./SummaryPage";
+import AdminPanel from "./AdminPanel";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -143,14 +144,7 @@ const Dashboard = () => {
           </div>
         );
       case "Admin Panel":
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl text-gray-950 font-bold mb-4">
-              Admin Panel
-            </h2>
-            <p className="text-gray-600">Admin panel content goes here</p>
-          </div>
-        );
+        return <AdminPanel />;
       default:
         return <HomePage />;
     }
@@ -179,52 +173,42 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
+      {/* Header - Always at top */}
       <Header
         onLogout={handleLogout}
-        onViewLoad={handleViewLoad} // Pass the view load handler to Header
-        className={
-          activeTab === "Home" ? "fixed top-0 left-0 right-0 z-20" : ""
-        }
+        onViewLoad={handleViewLoad}
       />
+      
+      {/* Sidebar - Below header */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        className={
-          activeTab === "Home" ? "fixed top-20 left-0 right-0 z-10" : ""
-        }
         onViewLoad={handleViewLoad}
         currentTableView={tableViewConfig}
         currentChartView={chartViewConfig}
         allColumns={allColumns}
       />
-      <motion.main
-        className={`flex-grow p-6 ${
-          activeTab === "Home" ||
-          activeTab === "Summary" ||
-          activeTab === "Charts"
-            ? "pb-16"
-            : ""
-        } ${activeTab === "Home" ? "pt-36" : "mt-4"}`}
-        key={activeTab}
-        variants={pageVariants}
-        initial="initial"
-        animate="in"
-        exit="out"
-        transition={pageTransition}
-      >
-        {renderContent()}
-      </motion.main>
-      <Footer
-        showButtons={activeTab === "Home"}
-        className={
-          activeTab === "Home" ||
-          activeTab === "Summary" ||
-          activeTab === "Charts"
-            ? "fixed bottom-0 left-0 right-0 z-10"
-            : ""
-        }
-      />
+      
+      {/* Main content area - Flexible */}
+      <div className="flex-1 flex flex-col">
+        <motion.main
+          className="flex-1 p-6"
+          key={activeTab}
+          variants={pageVariants}
+          initial="initial"
+          animate="in"
+          exit="out"
+          transition={pageTransition}
+        >
+          {renderContent()}
+        </motion.main>
+        
+        {/* Footer - At bottom */}
+        <Footer
+          showButtons={activeTab === "Home"}
+        />
+      </div>
     </div>
   );
 };

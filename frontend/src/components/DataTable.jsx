@@ -999,215 +999,265 @@ const DataTable = ({
           </div>
         ) : !isPivotMode ? (
           // Regular Table View
-          <div className="overflow-x-auto">
-            <table
-              className="min-w-full divide-y divide-gray-200"
-              ref={tableRef}
-            >
-              <thead className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-md">
-                <tr>
-                  {table.getHeaderGroups()[0].headers.map((header) => {
-                    const columnId = header.column.columnDef.accessorKey;
-                    const hasFilter = columnFilters.some(
-                      (f) => f.id === columnId
-                    );
-                    const sortDirection = header.column.getIsSorted();
-                    // Use consistent column sizing
-                    const columnSize = getColumnSize(columnId);
+          <div className="overflow-x-auto min-h-[500px]">
+            {table.getFilteredRowModel().rows.length === 0 ? (
+              // Show "No matching records" message when there are zero results
+              <div className="flex items-center justify-center min-h-[500px] text-gray-500 text-lg">
+                No matching records found
+              </div>
+            ) : (
+              <table
+                className="min-w-full divide-y divide-gray-200"
+                ref={tableRef}
+              >
+                <thead className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-md sticky top-0 z-10">
+                  <tr>
+                    {table.getHeaderGroups()[0].headers.map((header) => {
+                      const columnId = header.column.columnDef.accessorKey;
+                      const hasFilter = columnFilters.some(
+                        (f) => f.id === columnId
+                      );
+                      const sortDirection = header.column.getIsSorted();
+                      // Use consistent column sizing
+                      const columnSize = getColumnSize(columnId);
+
+                      return (
+                        <th
+                          key={header.id}
+                          className="text-left text-xs font-medium text-white uppercase tracking-wider border-r border-blue-700 last:border-r-0 relative group"
+                          style={{
+                            width: `${columnSize}px`,
+                            minWidth: `${MIN_COLUMN_WIDTH}px`,
+                            maxWidth: `${MAX_COLUMN_WIDTH}px`,
+                          }}
+                        >
+                          <div className="flex items-center justify-between h-full">
+                            <div
+                              className="flex items-center cursor-pointer hover:text-blue-200 px-4 py-3 flex-1"
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              <span className="mr-2 truncate">
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                              </span>
+                              {sortDirection === "asc" && (
+                                <span className="text-blue-200">↑</span>
+                              )}
+                              {sortDirection === "desc" && (
+                                <span className="text-blue-200">↓</span>
+                              )}
+                              {!sortDirection && (
+                                <span className="text-blue-300">↕</span>
+                              )}
+                            </div>
+
+                            {/* Resize Handle */}
+                            <div
+                              className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-blue-400 hover:bg-blue-300 opacity-0 group-hover:opacity-100"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setIsResizing(columnId);
+                              }}
+                            />
+                          </div>
+
+                          {/* Filter Button - moved to second row */}
+                          {columnId && (
+                            <div className="absolute right-2 bottom-2">
+                              <div
+                                className="relative"
+                                ref={(el) =>
+                                  (dropdownRefs.current[columnId] = el)
+                                }
+                              >
+                                <button
+                                  onClick={() => toggleDropdown(columnId)}
+                                  className={`p-1 rounded hover:bg-blue-500 ${
+                                    hasFilter
+                                      ? "text-blue-200 bg-blue-700"
+                                      : "text-blue-300"
+                                  }`}
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </button>
+
+                                {/* Filter Dropdown */}
+                                {openDropdowns[columnId] && (
+                                  <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
+                                    <div className="p-2">
+                                      <div className="pb-2 border-b border-gray-200 mb-2">
+                                        <p className="text-sm font-medium text-gray-700">
+                                          Filter by{" "}
+                                          {header.column.columnDef.header}
+                                        </p>
+                                      </div>
+
+                                      {/* Select All Option */}
+                                      <label className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer ">
+                                        <input
+                                          type="checkbox"
+                                          checked={
+                                            columnMultiSelectValues[columnId]
+                                              ?.length ===
+                                              getColumnFilterOptions[columnId]
+                                                ?.length &&
+                                            getColumnFilterOptions[columnId]
+                                              ?.length > 0
+                                          }
+                                          onChange={(e) =>
+                                            handleMultiSelectChange(
+                                              columnId,
+                                              "SELECT_ALL",
+                                              e.target.checked
+                                            )
+                                          }
+                                          className="mr-2 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm text-gray-700">
+                                          Select All
+                                        </span>
+                                      </label>
+
+                                      {/* Filter Options */}
+                                      {getColumnFilterOptions[columnId]?.map(
+                                        (value) => (
+                                          <label
+                                            key={value}
+                                            className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={columnMultiSelectValues[
+                                                columnId
+                                              ]?.includes(value)}
+                                              onChange={(e) =>
+                                                handleMultiSelectChange(
+                                                  columnId,
+                                                  value,
+                                                  e.target.checked
+                                                )
+                                              }
+                                              className="mr-2 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm text-gray-700 truncate">
+                                              {value}
+                                            </span>
+                                          </label>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {/* Actual Data Rows */}
+                  {table.getRowModel().rows.map((row, idx) => {
+                    const rowId = row.original.id || row.id;
+                    const isSelected = selectedRowId === rowId;
 
                     return (
-                      <th
-                        key={header.id}
-                        className="text-left text-xs font-medium text-white uppercase tracking-wider border-r border-blue-700 last:border-r-0 relative group"
-                        style={{
-                          width: `${columnSize}px`,
-                          minWidth: `${MIN_COLUMN_WIDTH}px`,
-                          maxWidth: `${MAX_COLUMN_WIDTH}px`,
-                        }}
+                      <tr
+                        key={row.id}
+                        id={`row-${rowId}`}
+                        className={`cursor-pointer ${
+                          idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                        } hover:bg-blue-50 ${isSelected ? "bg-yellow-100" : ""}`}
+                        onClick={() => handleRowClick(row)}
                       >
-                        <div className="flex items-center justify-between h-full">
-                          <div
-                            className="flex items-center cursor-pointer hover:text-blue-200 px-4 py-3 flex-1"
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            <span className="mr-2 truncate">
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                            </span>
-                            {sortDirection === "asc" && (
-                              <span className="text-blue-200">↑</span>
-                            )}
-                            {sortDirection === "desc" && (
-                              <span className="text-blue-200">↓</span>
-                            )}
-                            {!sortDirection && (
-                              <span className="text-blue-300">↕</span>
-                            )}
-                          </div>
+                        {row.getVisibleCells().map((cell) => {
+                          const columnId = cell.column.columnDef.accessorKey;
+                          // Use consistent column sizing
+                          const columnSize = getColumnSize(columnId);
 
-                          {/* Resize Handle */}
-                          <div
-                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-blue-400 hover:bg-blue-300 opacity-0 group-hover:opacity-100"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              setIsResizing(columnId);
-                            }}
-                          />
-                        </div>
-
-                        {/* Filter Button - moved to second row */}
-                        {columnId && (
-                          <div className="absolute right-2 bottom-2">
-                            <div
-                              className="relative"
-                              ref={(el) =>
-                                (dropdownRefs.current[columnId] = el)
-                              }
+                          return (
+                            <td
+                              key={cell.id}
+                              className="text-sm text-gray-900 border-r border-gray-100 last:border-r-0"
+                              style={{
+                                width: `${columnSize}px`,
+                                minWidth: `${MIN_COLUMN_WIDTH}px`,
+                                maxWidth: `${MAX_COLUMN_WIDTH}px`,
+                              }}
                             >
-                              <button
-                                onClick={() => toggleDropdown(columnId)}
-                                className={`p-1 rounded hover:bg-blue-500 ${
-                                  hasFilter
-                                    ? "text-blue-200 bg-blue-700"
-                                    : "text-blue-300"
-                                }`}
+                              <div
+                                className="px-4 py-3 truncate hover:text-blue-600"
+                                title={String(cell.getValue())}
                               >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </button>
-
-                              {/* Filter Dropdown */}
-                              {openDropdowns[columnId] && (
-                                <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
-                                  <div className="p-2">
-                                    <div className="pb-2 border-b border-gray-200 mb-2">
-                                      <p className="text-sm font-medium text-gray-700">
-                                        Filter by{" "}
-                                        {header.column.columnDef.header}
-                                      </p>
-                                    </div>
-
-                                    {/* Select All Option */}
-                                    <label className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer ">
-                                      <input
-                                        type="checkbox"
-                                        checked={
-                                          columnMultiSelectValues[columnId]
-                                            ?.length ===
-                                            getColumnFilterOptions[columnId]
-                                              ?.length &&
-                                          getColumnFilterOptions[columnId]
-                                            ?.length > 0
-                                        }
-                                        onChange={(e) =>
-                                          handleMultiSelectChange(
-                                            columnId,
-                                            "SELECT_ALL",
-                                            e.target.checked
-                                          )
-                                        }
-                                        className="mr-2 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                      />
-                                      <span className="text-sm text-gray-700">
-                                        Select All
-                                      </span>
-                                    </label>
-
-                                    {/* Filter Options */}
-                                    {getColumnFilterOptions[columnId]?.map(
-                                      (value) => (
-                                        <label
-                                          key={value}
-                                          className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer"
-                                        >
-                                          <input
-                                            type="checkbox"
-                                            checked={columnMultiSelectValues[
-                                              columnId
-                                            ]?.includes(value)}
-                                            onChange={(e) =>
-                                              handleMultiSelectChange(
-                                                columnId,
-                                                value,
-                                                e.target.checked
-                                              )
-                                            }
-                                            className="mr-2 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                          />
-                                          <span className="text-sm text-gray-700 truncate">
-                                            {value}
-                                          </span>
-                                        </label>
-                                      )
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </th>
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
                     );
                   })}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {table.getRowModel().rows.map((row, idx) => {
-                  const rowId = row.original.id || row.id;
-                  const isSelected = selectedRowId === rowId;
 
-                  return (
-                    <tr
-                      key={row.id}
-                      id={`row-${rowId}`}
-                      className={`cursor-pointer ${
-                        idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      } hover:bg-blue-50 ${isSelected ? "bg-yellow-100" : ""}`}
-                      onClick={() => handleRowClick(row)}
-                    >
-                      {row.getVisibleCells().map((cell) => {
-                        const columnId = cell.column.columnDef.accessorKey;
-                        // Use consistent column sizing
-                        const columnSize = getColumnSize(columnId);
+                  {/* Placeholder Rows - Fill remaining space when fewer rows than page size */}
+                  {Array.from({
+                    length: Math.max(
+                      0,
+                      table.getState().pagination.pageSize -
+                        table.getRowModel().rows.length
+                    ),
+                  }).map((_, placeholderIdx) => {
+                    const actualRowCount = table.getRowModel().rows.length;
+                    const isEvenRow = (actualRowCount + placeholderIdx) % 2 === 0;
 
-                        return (
-                          <td
-                            key={cell.id}
-                            className="text-sm text-gray-900 border-r border-gray-100 last:border-r-0"
-                            style={{
-                              width: `${columnSize}px`,
-                              minWidth: `${MIN_COLUMN_WIDTH}px`,
-                              maxWidth: `${MAX_COLUMN_WIDTH}px`,
-                            }}
-                          >
-                            <div
-                              className="px-4 py-3 truncate hover:text-blue-600"
-                              title={String(cell.getValue())}
+                    return (
+                      <tr
+                        key={`placeholder-${placeholderIdx}`}
+                        className={`${
+                          isEvenRow ? "bg-white" : "bg-gray-50"
+                        } pointer-events-none`}
+                      >
+                        {table.getVisibleLeafColumns().map((column) => {
+                          const columnId = column.columnDef.accessorKey || column.id;
+                          const columnSize = getColumnSize(columnId);
+
+                          return (
+                            <td
+                              key={`placeholder-${placeholderIdx}-${columnId}`}
+                              className="text-sm border-r border-gray-100 last:border-r-0"
+                              style={{
+                                width: `${columnSize}px`,
+                                minWidth: `${MIN_COLUMN_WIDTH}px`,
+                                maxWidth: `${MAX_COLUMN_WIDTH}px`,
+                              }}
                             >
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                              <div className="px-4 py-3 text-transparent select-none">
+                                .
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         ) : null}
       </div>

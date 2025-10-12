@@ -1240,7 +1240,7 @@ const CustomChartBuilder = ({
           <select
             value={chartTypeState}
             onChange={(e) => setChartTypeState(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
           >
             <option value="bar">Bar Chart</option>
             <option value="line">Line Chart</option>
@@ -1257,16 +1257,16 @@ const CustomChartBuilder = ({
           <select
             value={xAxisState}
             onChange={(e) => setXAxisState(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             disabled={
               selectedColumns &&
               selectedColumns.length > 0 &&
               selectedColumns.length < 2
             }
           >
-            <option value="">Select column</option>
+            <option value="" className="text-gray-600">Select column</option>
             {xColumnOptions.map((col) => (
-              <option key={col.accessorKey} value={col.accessorKey}>
+              <option key={col.accessorKey} value={col.accessorKey} className="text-gray-900">
                 {col.header}
               </option>
             ))}
@@ -1281,16 +1281,16 @@ const CustomChartBuilder = ({
             <select
               value={yAxisState}
               onChange={(e) => setYAxisState(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
               disabled={
                 selectedColumns &&
                 selectedColumns.length > 0 &&
                 selectedColumns.length < 2
               }
             >
-              <option value="">Select column</option>
+              <option value="" className="text-gray-600">Select column</option>
               {yColumnOptions.map((col) => (
-                <option key={col.accessorKey} value={col.accessorKey}>
+                <option key={col.accessorKey} value={col.accessorKey} className="text-gray-900">
                   {col.header}
                 </option>
               ))}

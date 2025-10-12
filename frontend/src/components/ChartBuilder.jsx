@@ -249,7 +249,7 @@ const ChartBuilder = ({ data = [] }) => {
             <select
               value={chartType}
               onChange={(e) => setChartType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="bar">Bar Chart</option>
               <option value="line">Line Chart</option>
@@ -266,11 +266,11 @@ const ChartBuilder = ({ data = [] }) => {
             <select
               value={xAxis}
               onChange={(e) => setXAxis(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
-              <option value="">Select X Axis</option>
+              <option value="" className="text-gray-600">Select X Axis</option>
               {availableColumns.map((col) => (
-                <option key={col} value={col}>
+                <option key={col} value={col} className="text-gray-900">
                   {col}
                 </option>
               ))}
@@ -284,11 +284,11 @@ const ChartBuilder = ({ data = [] }) => {
             <select
               value={yAxis}
               onChange={(e) => setYAxis(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
-              <option value="">Select Y Axis</option>
+              <option value="" className="text-gray-600">Select Y Axis</option>
               {availableColumns.map((col) => (
-                <option key={col} value={col}>
+                <option key={col} value={col} className="text-gray-900">
                   {col}
                 </option>
               ))}

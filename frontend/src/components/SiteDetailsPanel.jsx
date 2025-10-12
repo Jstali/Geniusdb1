@@ -88,41 +88,72 @@ const SiteDetailsPanel = ({ selectedSite, summaryStats, onClose }) => {
     return null;
   };
 
-  // Get property values with fallbacks
+  // Helper function to calculate risk level based on Generation Headroom
+  const calculateRiskLevel = (headroom) => {
+    if (headroom === null || headroom === undefined) return { label: "Unknown", color: "gray" };
+    const value = parseFloat(headroom);
+    if (isNaN(value)) return { label: "Unknown", color: "gray" };
+    
+    if (value >= 50) return { label: "Low (Green)", color: "green" };
+    if (value >= 20) return { label: "Medium (Amber)", color: "amber" };
+    return { label: "High (Red)", color: "red" };
+  };
+
+  // Get property values with fallbacks - ONLY required fields
   const siteName =
     getPropertyValue(selectedSite, "site_name", "siteName", "Site Name") ||
     "Unknown Site";
-  const bulkSupplyPoint =
+  
+  const bsp =
     getPropertyValue(
       selectedSite,
       "Bulk supply point",
       "bulk_supply_point",
       "bulkSupplyPoint"
     ) || "Not Available";
-  const connectivityVoltage =
+  
+  const gsp =
     getPropertyValue(
       selectedSite,
-      "site_voltage",
-      "siteVoltage",
-      "Site Voltage"
+      "Grid supply point",
+      "grid_supply_point",
+      "gridSupplyPoint",
+      "Associatedgsp",
+      "associatedgsp"
     ) || "Not Available";
-  const availablePower = getPropertyValue(
+  
+  const firmCapacity = getPropertyValue(
+    selectedSite,
+    "Firm Capacity",
+    "Firm_Capacity",
+    "firm_capacity",
+    "firmCapacity"
+  );
+  
+  const genCapacity = getPropertyValue(
+    selectedSite,
+    "Generation Capacity",
+    "Generation_Capacity",
+    "generation_capacity",
+    "generationCapacity"
+  );
+  
+  const spareCapacity = getPropertyValue(
+    selectedSite,
+    "Spare Summer",
+    "Spare_Summer",
+    "spare_summer",
+    "spareCapacity"
+  );
+  
+  const generationHeadroom = getPropertyValue(
     selectedSite,
     "Generation Headroom Mw",
     "generation_headroom",
     "generationHeadroom"
   );
-  const constraint = getPropertyValue(
-    selectedSite,
-    "Constraint description",
-    "constraint_description",
-    "constraintDescription"
-  );
-  const county =
-    getPropertyValue(selectedSite, "county", "County") || "Not Available";
-  const futureOutlook =
-    getPropertyValue(selectedSite, "future_outlook", "futureOutlook") ||
-    "No future outlook data available for this site.";
+  
+  const riskLevel = calculateRiskLevel(generationHeadroom);
 
   return (
     <div className="site-details-container bg-white p-4 w-80 md:w-80 max-h-screen overflow-y-auto">
@@ -137,93 +168,68 @@ const SiteDetailsPanel = ({ selectedSite, summaryStats, onClose }) => {
       </div>
 
       <div className="space-y-4">
+        {/* Site Name as Heading */}
         <div>
-          <h4 className="font-medium text-gray-700 mb-2">{siteName}</h4>
+          <h4 className="text-xl font-semibold text-gray-800 mb-4">{siteName}</h4>
+          
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600">Bulk Supply Point:</span>
-              <span className="font-medium">{bulkSupplyPoint}</span>
+            {/* Risk Level */}
+            <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
+              <span className="text-gray-600 font-medium">Risk Level:</span>
+              <span className={`font-semibold ${
+                riskLevel.color === "green" ? "text-green-600" :
+                riskLevel.color === "amber" ? "text-amber-600" :
+                riskLevel.color === "red" ? "text-red-600" :
+                "text-gray-600"
+              }`}>
+                {riskLevel.label}
+              </span>
             </div>
-            <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600">Connectivity Voltage:</span>
-              <span className="font-medium">{connectivityVoltage} kV</span>
+
+            {/* BSP (Bulk Supply Point) */}
+            <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
+              <span className="text-gray-600 font-medium">BSP:</span>
+              <span className="font-medium text-gray-800">{bsp}</span>
             </div>
-            <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600">Available Power:</span>
-              <span className="font-medium">
-                {availablePower !== null && availablePower !== undefined
-                  ? `${availablePower} MW`
+
+            {/* GSP (Grid Supply Point) */}
+            <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
+              <span className="text-gray-600 font-medium">GSP:</span>
+              <span className="font-medium text-gray-800">{gsp}</span>
+            </div>
+
+            {/* Firm Capacity */}
+            <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
+              <span className="text-gray-600 font-medium">Firm Capacity:</span>
+              <span className="font-medium text-gray-800">
+                {firmCapacity !== null && firmCapacity !== undefined
+                  ? `${parseFloat(firmCapacity).toFixed(2)} MW`
                   : "Not Available"}
               </span>
             </div>
-            <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600">Constraint:</span>
-              <span className="font-medium">
-                {constraint !== null && constraint !== undefined
-                  ? constraint
-                  : "None"}
+
+            {/* Gen Capacity (Generation Capacity) */}
+            <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
+              <span className="text-gray-600 font-medium">Gen Capacity:</span>
+              <span className="font-medium text-gray-800">
+                {genCapacity !== null && genCapacity !== undefined
+                  ? `${parseFloat(genCapacity).toFixed(2)} MW`
+                  : "Not Available"}
               </span>
             </div>
-            <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600">County:</span>
-              <span className="font-medium">{county}</span>
+
+            {/* Spare Capacity */}
+            <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
+              <span className="text-gray-600 font-medium">Spare Capacity:</span>
+              <span className="font-medium text-gray-800">
+                {spareCapacity !== null && spareCapacity !== undefined
+                  ? `${parseFloat(spareCapacity).toFixed(2)} MW`
+                  : "Not Available"}
+              </span>
             </div>
           </div>
-        </div>
-
-        <div className="border-t border-gray-200 pt-4">
-          <h4 className="font-medium text-gray-700 mb-2">Future Outlook</h4>
-          <p className="text-sm text-gray-600">{futureOutlook}</p>
         </div>
       </div>
-
-      {summaryStats && (
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <h4 className="font-medium text-gray-700 mb-2">Summary Statistics</h4>
-          <div className="max-h-60 overflow-y-auto bg-white rounded pr-2">
-            <div className="space-y-2">
-              <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-                <span className="text-sm text-gray-600">
-                  Total Substations:
-                </span>
-                <span className="text-sm font-medium">
-                  {summaryStats.totalSubstations}
-                </span>
-              </div>
-              <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-                <span className="text-sm text-gray-600">Avg. Headroom:</span>
-                <span className="text-sm font-medium">
-                  {summaryStats.avgHeadroom?.toFixed(2) || "N/A"} MW
-                </span>
-              </div>
-              <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-                <span className="text-sm text-gray-600">
-                  Green Sites (≥50MW):
-                </span>
-                <span className="text-sm font-medium">
-                  {summaryStats.greenSites || 0}
-                </span>
-              </div>
-              <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-                <span className="text-sm text-gray-600">
-                  Amber Sites (20-50MW):
-                </span>
-                <span className="text-sm font-medium">
-                  {summaryStats.amberSites || 0}
-                </span>
-              </div>
-              <div className="flex justify-between bg-gray-50 p-2 rounded transition-colors duration-200 hover:bg-gray-100">
-                <span className="text-sm text-gray-600">
-                  Red Sites (&lt;20MW):
-                </span>
-                <span className="text-sm font-medium">
-                  {summaryStats.redSites || 0}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

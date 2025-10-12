@@ -1210,85 +1210,85 @@ const DataTable = ({
             </table>
           </div>
         ) : null}
+      </div>
 
-        {/* Pagination */}
-        {!isPivotMode && (
-          <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <p className="text-sm text-gray-700">
-                  Showing{" "}
-                  <span className="font-medium">
-                    {table.getState().pagination.pageIndex *
-                      table.getState().pagination.pageSize +
-                      1}
-                  </span>{" "}
-                  to{" "}
-                  <span className="font-medium">
-                    {Math.min(
-                      (table.getState().pagination.pageIndex + 1) *
-                        table.getState().pagination.pageSize,
-                      table.getFilteredRowModel().rows.length
-                    )}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-medium">
-                    {table.getFilteredRowModel().rows.length}
-                  </span>{" "}
-                  results
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <select
-                  value={table.getState().pagination.pageSize}
-                  onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="rounded border-gray-300 text-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
+      {/* Pagination Controls - Now OUTSIDE and BELOW the table */}
+      {!isPivotMode && (
+        <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <p className="text-sm text-gray-700">
+                Showing{" "}
+                <span className="font-medium">
+                  {table.getState().pagination.pageIndex *
+                    table.getState().pagination.pageSize +
+                    1}
+                </span>{" "}
+                to{" "}
+                <span className="font-medium">
+                  {Math.min(
+                    (table.getState().pagination.pageIndex + 1) *
+                      table.getState().pagination.pageSize,
+                    table.getFilteredRowModel().rows.length
+                  )}
+                </span>{" "}
+                of{" "}
+                <span className="font-medium">
+                  {table.getFilteredRowModel().rows.length}
+                </span>{" "}
+                results
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <select
+                value={table.getState().pagination.pageSize}
+                onChange={(e) => table.setPageSize(Number(e.target.value))}
+                className="rounded border-gray-300 text-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
+              >
+                {[5, 10, 20, 30, 40, 50].map((pageSize) => (
+                  <option key={pageSize} value={pageSize}>
+                    Show {pageSize}
+                  </option>
+                ))}
+              </select>
+              <div className="flex">
+                <button
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {[5, 10, 20, 30, 40, 50].map((pageSize) => (
-                    <option key={pageSize} value={pageSize}>
-                      Show {pageSize}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex">
-                  <button
-                    onClick={() => table.setPageIndex(0)}
-                    disabled={!table.getCanPreviousPage()}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
-                  >
-                    ««
-                  </button>
-                  <button
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
-                  >
-                    ‹
-                  </button>
-                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                    Page {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
-                  </span>
-                  <button
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
-                  >
-                    ›
-                  </button>
-                  <button
-                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                    disabled={!table.getCanNextPage()}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
-                  >
-                    »»
-                  </button>
-                </div>
+                  ««
+                </button>
+                <button
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ‹
+                </button>
+                <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  Page {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()}
+                </span>
+                <button
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ›
+                </button>
+                <button
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  »»
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

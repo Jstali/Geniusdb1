@@ -20,17 +20,17 @@ const Header = ({
   onViewLoad = null, // Add onViewLoad prop
 }) => {
   return (
-    <header className={`w-full px-6 py-4 backdrop-blur-xl bg-white/5 border-b border-violet-500/20 shadow-glow ${className}`}>
-      <div className="max-w-full mx-auto">
+    <header className={`w-full px-4 py-4 bg-white border-b border-gray-200 shadow-sm ${className}`}>
+      <div className="w-full">
         <div className="flex items-center justify-between">
           {/* Left: Title */}
           <div className="flex items-center">
             <img 
               src="/geniusdb2.png" 
               alt="Genius DB Logo" 
-              className="w-16 h-16 mr-3 object-contain drop-shadow-lg"
+              className="w-12 h-12 mr-4 object-contain"
             />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold text-gray-900">
               GeniusDB
             </h1>
           </div>
@@ -45,7 +45,7 @@ const Header = ({
                 {onLogout ? (
                   <button
                     onClick={onLogout}
-                    className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-105 font-medium whitespace-nowrap"
+                    className="modern-btn bg-red-500 hover:bg-red-600 text-white"
                   >
                     Logout
                   </button>

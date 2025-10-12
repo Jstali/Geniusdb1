@@ -126,8 +126,8 @@ const Dashboard = () => {
         return <TableView />;
       case "Charts":
         return (
-          <div className="p-6">
-            <div className="mb-6">
+          <div className="px-4 py-6">
+            <div className="mb-4">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Charts</h1>
               <p className="text-gray-600">
                 Build custom charts from your data. Select a chart type and
@@ -173,7 +173,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header - Always at top */}
       <Header
         onLogout={handleLogout}
@@ -193,7 +193,7 @@ const Dashboard = () => {
       {/* Main content area - Flexible */}
       <div className="flex-1 flex flex-col">
         <motion.main
-          className="flex-1 p-6"
+          className="flex-1 modern-page-container"
           key={activeTab}
           variants={pageVariants}
           initial="initial"

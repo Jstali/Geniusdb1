@@ -71,8 +71,8 @@ const Charts = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-8">
+    <div className="px-4 py-6">
+      <div className="mb-4">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent mb-3">
           Charts
         </h1>

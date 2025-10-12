@@ -224,10 +224,10 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Map View</h1>
+      <div className="w-full px-4 py-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">Map View</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           {/* Left Sidebar - Filters */}
           <div className="lg:col-span-4 sidebar-panel">
             <SidebarFilters

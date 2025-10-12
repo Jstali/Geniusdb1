@@ -25,41 +25,35 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
             <h4 className="font-medium text-gray-700 mb-4">
               Summary Statistics
             </h4>
-            <div className="">
+            <div className="space-y-3">
               <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
                 <span className="text-sm text-gray-600">
                   Total Substations:
                 </span>
-                <span className="">
+                <span className="text-sm font-medium">
                   {summaryStats.totalSubstations}
                 </span>
               </div>
-              <div className="">
-                <span className="">Avg. Headroom:</span>
+              <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
+                <span className="text-sm text-gray-600">Avg. Headroom:</span>
                 <span className="text-sm font-medium">
                   {summaryStats.avgHeadroom?.toFixed(2) || "N/A"} MW
                 </span>
               </div>
-              <div className="">
-                <span className="">
-                  Green Sites (≥50MW):
-                </span>
-                <span className="">
+              <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
+                <span className="text-sm text-gray-600">Green Sites (≥50MW):</span>
+                <span className="text-sm font-medium">
                   {summaryStats.greenSites || 0}
                 </span>
               </div>
-              <div className="">
-                <span className="text-sm text-gray-600">
-                  Amber Sites (20-50MW):
-                </span>
+              <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
+                <span className="text-sm text-gray-600">Amber Sites (20-50MW):</span>
                 <span className="text-sm font-medium">
                   {summaryStats.amberSites || 0}
                 </span>
               </div>
-              <div className="">
-                <span className="text-sm text-gray-600">
-                  Red Sites (&lt;20MW):
-                </span>
+              <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
+                <span className="text-sm text-gray-600">Red Sites (&lt;20MW):</span>
                 <span className="text-sm font-medium">
                   {summaryStats.redSites || 0}
                 </span>
@@ -178,7 +172,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
       {summaryStats && (
         <div className="mt-6 pt-4 border-t border-gray-200">
           <h4 className="font-medium text-gray-700 mb-3">Summary Statistics</h4>
-          <div className="space-y-3">
+          <div className="space-y-3 px-3 py-2">
             <div className="flex justify-between bg-gray-50 p-3 rounded-lg">
               <span className="text-sm text-gray-600">Total Substations:</span>
               <span className="text-sm font-medium">

@@ -67,7 +67,7 @@ const CompactGoogleMap = ({
   }
 
   // Set default filters if not provided
-  const effectiveFilters = filters || useMemo(() => ({}), []);
+  const effectiveFilters = useMemo(() => filters || {}, [filters]);
 
   // Convert frontend filters to backend format
   const convertFilters = (frontendFilters) => {

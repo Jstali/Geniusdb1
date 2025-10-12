@@ -722,41 +722,35 @@ const DataTable = ({
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full px-0">
       {/* Toolbar */}
-      <div className="mb-4 flex flex-wrap gap-4 items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
-        {/* Left side - Search and Table Toggle */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 min-w-64">
-            <div className="relative text-blue-950">
-              <input
-                type="text"
-                value={globalFilter ?? ""}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                placeholder="Search all columns..."
-                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent "
-              />
-              <svg
-                className="absolute left-3 top-2.5 h-4 w-4 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-          </div>
-
-          {/* Table View Toggle - REMOVED as per requirements */}
+      <div className="mb-4 flex items-center justify-between modern-card-compact w-full">
+        {/* Search Box */}
+        <div className="flex items-center bg-gray-50 rounded-lg px-4 py-3 w-full max-w-2xl border border-gray-200">
+          <svg
+            className="h-5 w-5 text-gray-400 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z"
+            />
+          </svg>
+          <input
+            type="text"
+            value={globalFilter ?? ""}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            placeholder="Search all columns..."
+            className="bg-transparent outline-none w-full text-gray-700 placeholder-gray-400"
+          />
         </div>
 
-        {/* Right side - Action buttons */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-3 ml-6">
           {/* Column Visibility Toggle */}
           <div className="relative" ref={columnToggleRef}>
             <button
@@ -765,7 +759,7 @@ const DataTable = ({
                 showColumnToggleRef.current = newState;
                 setShowColumnToggle(newState);
               }}
-              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="modern-btn modern-btn-secondary"
             >
               Columns
             </button>
@@ -866,10 +860,10 @@ const DataTable = ({
           {/* Pivot Table Toggle */}
           <button
             onClick={toggleViewMode}
-            className={`px-3 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 ${
+            className={`modern-btn ${
               isPivotMode
-                ? "text-white bg-blue-600 border border-blue-600 focus:ring-blue-500"
-                : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:ring-gray-500"
+                ? "modern-btn-primary"
+                : "modern-btn-secondary"
             }`}
           >
             {isPivotMode ? "Switch to Regular Table" : "Switch to Pivot Table"}
@@ -878,7 +872,7 @@ const DataTable = ({
           {/* Export CSV Button */}
           <button
             onClick={exportToCSV}
-            className="px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="modern-btn modern-btn-primary bg-green-500 hover:bg-green-600"
           >
             <svg
               className="w-4 h-4 mr-2 inline-block"
@@ -900,7 +894,7 @@ const DataTable = ({
           {(columnFilters.length > 0 || globalFilter) && (
             <button
               onClick={clearAllFilters}
-              className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="modern-btn bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
             >
               Clear Filters
             </button>
@@ -910,8 +904,8 @@ const DataTable = ({
 
       {/* Active Filters */}
       {(columnFilters.length > 0 || globalFilter) && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="mb-4 p-4 modern-card-compact mx-0 bg-blue-50 border-blue-200">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium text-blue-800">
               Active Filters:
             </span>
@@ -973,13 +967,13 @@ const DataTable = ({
 
       {/* Pivot Error Message */}
       {pivotError && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
+        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200 mx-4">
           {pivotError}
         </div>
       )}
 
       {/* Table or Pivot Table View */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden table-container">
+      <div className="table-container mx-4 max-w-6xl">
         {isPivotMode && pivotConfig ? (
           // Pivot Table View
           <div className="p-4">
@@ -1004,7 +998,7 @@ const DataTable = ({
               className="min-w-full divide-y divide-gray-200"
               ref={tableRef}
             >
-              <thead className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-md">
+              <thead className="bg-gray-50 shadow-sm">
                 <tr>
                   {table.getHeaderGroups()[0].headers.map((header) => {
                     const columnId = header.column.columnDef.accessorKey;
@@ -1018,19 +1012,26 @@ const DataTable = ({
                     return (
                       <th
                         key={header.id}
-                        className="text-left text-xs font-medium text-white uppercase tracking-wider border-r border-blue-700 last:border-r-0 relative group"
+                        className="text-left text-sm font-medium text-gray-700 uppercase tracking-wider border-r border-gray-200 last:border-r-0 relative group"
                         style={{
                           width: `${columnSize}px`,
                           minWidth: `${MIN_COLUMN_WIDTH}px`,
                           maxWidth: `${MAX_COLUMN_WIDTH}px`,
+                          height: '56px',
+                          paddingLeft: '20px !important',
+                          paddingRight: '20px !important',
+                          paddingTop: '12px !important',
+                          paddingBottom: '12px !important',
+                          boxSizing: 'border-box',
                         }}
                       >
-                        <div className="flex items-center justify-between h-full">
+                        <div style={{ padding: 0, position: 'relative', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div
-                            className="flex items-center cursor-pointer hover:text-blue-200 px-4 py-3 flex-1"
+                            className="cursor-pointer hover:text-blue-200"
+                            style={{ padding: 0, flex: 1, minWidth: 0, marginRight: '20px' }}
                             onClick={header.column.getToggleSortingHandler()}
                           >
-                            <span className="mr-2 truncate">
+                            <span style={{ padding: 0, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {flexRender(
                                 header.column.columnDef.header,
                                 header.getContext()
@@ -1162,7 +1163,7 @@ const DataTable = ({
                   })}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-100">
                 {table.getRowModel().rows.map((row, idx) => {
                   const rowId = row.original.id || row.id;
                   const isSelected = selectedRowId === rowId;
@@ -1173,8 +1174,9 @@ const DataTable = ({
                       id={`row-${rowId}`}
                       className={`cursor-pointer ${
                         idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      } hover:bg-blue-50 ${isSelected ? "bg-yellow-100" : ""}`}
+                      } hover:bg-blue-50 transition-colors duration-200 ${isSelected ? "bg-blue-100" : ""}`}
                       onClick={() => handleRowClick(row)}
+                      style={{ height: '56px' }}
                     >
                       {row.getVisibleCells().map((cell) => {
                         const columnId = cell.column.columnDef.accessorKey;
@@ -1184,15 +1186,28 @@ const DataTable = ({
                         return (
                           <td
                             key={cell.id}
-                            className="text-sm text-gray-900 border-r border-gray-100 last:border-r-0"
+                            className="text-sm text-gray-900 border-r border-gray-100 last:border-r-0 align-middle"
                             style={{
                               width: `${columnSize}px`,
                               minWidth: `${MIN_COLUMN_WIDTH}px`,
                               maxWidth: `${MAX_COLUMN_WIDTH}px`,
+                              paddingLeft: '20px !important',
+                              paddingRight: '20px !important',
+                              paddingTop: '12px !important',
+                              paddingBottom: '12px !important',
+                              boxSizing: 'border-box',
                             }}
                           >
                             <div
-                              className="px-4 py-3 truncate hover:text-blue-600"
+                              className="hover:text-blue-600 h-full"
+                              style={{ 
+                                padding: 0, 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis', 
+                                whiteSpace: 'nowrap',
+                                maxWidth: '100%',
+                                boxSizing: 'border-box'
+                              }}
                               title={String(cell.getValue())}
                             >
                               {flexRender(
@@ -1213,7 +1228,7 @@ const DataTable = ({
 
         {/* Pagination */}
         {!isPivotMode && (
-          <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+          <div className="bg-gray-50 px-4 py-4 border-t border-gray-200 sm:px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <p className="text-sm text-gray-700">
@@ -1242,7 +1257,7 @@ const DataTable = ({
                 <select
                   value={table.getState().pagination.pageSize}
                   onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="rounded border-gray-300 text-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
+                  className="modern-select text-sm"
                 >
                   {[5, 10, 20, 30, 40, 50].map((pageSize) => (
                     <option key={pageSize} value={pageSize}>
@@ -1254,32 +1269,32 @@ const DataTable = ({
                   <button
                     onClick={() => table.setPageIndex(0)}
                     disabled={!table.getCanPreviousPage()}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
+                    className="modern-btn modern-btn-secondary text-sm disabled:opacity-50 rounded-l-md rounded-r-none"
                   >
                     ««
                   </button>
                   <button
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
-                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
+                    className="modern-btn modern-btn-secondary text-sm disabled:opacity-50 rounded-none"
                   >
                     ‹
                   </button>
-                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  <span className="modern-btn modern-btn-secondary text-sm rounded-none bg-gray-100">
                     Page {table.getState().pagination.pageIndex + 1} of{" "}
                     {table.getPageCount()}
                   </span>
                   <button
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
-                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
+                    className="modern-btn modern-btn-secondary text-sm disabled:opacity-50 rounded-none"
                   >
                     ›
                   </button>
                   <button
                     onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                     disabled={!table.getCanNextPage()}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 "
+                    className="modern-btn modern-btn-secondary text-sm disabled:opacity-50 rounded-r-md rounded-l-none"
                   >
                     »»
                   </button>

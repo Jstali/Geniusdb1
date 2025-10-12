@@ -248,22 +248,22 @@ const HomePage = ({
   console.log("HomePage activeData:", activeData);
 
   return (
-    <div className="min-h-screen flex flex-col space-y-8 p-6">
+    <div className="min-h-screen flex flex-col space-y-6 px-4 py-6">
       {/* Header Section */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent mb-2">
+      <div className="text-center mb-4">
+        <h1 className="modern-heading-xl text-gray-900 mb-4">
           Power System Dashboard
         </h1>
-        <p className="text-lg text-gray-300">
+        <p className="modern-text-secondary text-lg">
           Interactive map and data analysis for power infrastructure monitoring
         </p>
       </div>
 
       {/* Main Content Area - Three Compact Panels */}
-      <div className="flex flex-col lg:flex-row gap-4 h-[450px]">
+      <div className="flex flex-col lg:flex-row gap-3 h-[500px]">
         {/* Left Panel - Filters */}
-        <div className="w-full lg:w-72 xl:w-80 flex-shrink-0">
-          <div className="glass-card p-4 h-full flex flex-col">
+        <div className="w-full sm:w-full lg:w-64 xl:w-64 flex-shrink-0">
+          <div className="modern-card h-full flex flex-col">
             <SidebarFilters
               onSiteNameSearch={(name) => {
                 console.log("HomePage: Site name filter changed to:", name);
@@ -290,8 +290,8 @@ const HomePage = ({
 
         {/* Center Panel - Map */}
         <div className="flex-1 min-w-0">
-          <div className="glass-card p-2 h-full flex flex-col">
-            <div className="flex-1 rounded-lg overflow-hidden shadow-lg relative">
+          <div className="modern-card h-full flex flex-col">
+            <div className="flex-1 rounded-lg overflow-hidden shadow-sm relative">
               {console.log("HomePage: Passing data to CompactGoogleMapSimple:", {
                 dataLength: (activeData.length > 0 ? activeData : data).length,
                 activeDataLength: activeData.length,
@@ -314,8 +314,8 @@ const HomePage = ({
         </div>
 
         {/* Right Panel - Site Details */}
-        <div className="w-full lg:w-72 xl:w-80 flex-shrink-0">
-          <div className="glass-card p-4 h-full flex flex-col">
+        <div className="w-full sm:w-full lg:w-64 xl:w-72 flex-shrink-0">
+          <div className="modern-card h-full flex flex-col">
             <SiteDetailsPanel
               selectedSite={selectedSite}
               summaryStats={summaryStats}
@@ -327,14 +327,14 @@ const HomePage = ({
 
       {/* Bottom Section - Data Table with More Space */}
       <div className="flex-1 min-h-[500px]">
-        <div className="glass-card p-6 h-full">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-white mb-2">Data Analysis</h2>
-            <p className="text-gray-300">Detailed view of power system infrastructure data</p>
+        <div className="modern-card h-full">
+          <div className="mb-4">
+            <h2 className="modern-heading-lg text-gray-900 mb-3">Data Analysis</h2>
+            <p className="modern-text-secondary">Detailed view of power system infrastructure data</p>
           </div>
           {loading ? (
             <div className="w-full h-64 flex items-center justify-center">
-              <div className="text-gray-600">Loading data...</div>
+              <div className="modern-text-secondary">Loading data...</div>
             </div>
           ) : error ? (
             <div className="w-full h-64 flex items-center justify-center">

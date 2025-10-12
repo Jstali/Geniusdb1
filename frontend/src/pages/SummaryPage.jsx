@@ -138,7 +138,7 @@ const SummaryPage = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
@@ -146,7 +146,7 @@ const SummaryPage = () => {
   if (error) {
     return (
       <div
-        className="glass-card bg-red-500/10 border-red-500/30 text-red-300 px-4 py-3 rounded-xl"
+        className="modern-card bg-red-50 border-red-200 text-red-700 px-6 py-4"
         role="alert"
       >
         <strong className="font-bold">Error! </strong>
@@ -158,7 +158,7 @@ const SummaryPage = () => {
   if (!summaryData) {
     return (
       <div
-        className="glass-card bg-yellow-500/10 border-yellow-500/30 text-yellow-300 px-4 py-3 rounded-xl"
+        className="modern-card bg-yellow-50 border-yellow-200 text-yellow-700 px-6 py-4"
         role="alert"
       >
         <strong className="font-bold">No data! </strong>
@@ -168,50 +168,50 @@ const SummaryPage = () => {
   }
 
   return (
-    <div className="min-h-screen p-8 space-y-12">
+    <div className="min-h-screen px-4 py-6 space-y-6">
       {/* Header Section */}
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent mb-4">
+      <div className="text-center mb-6">
+        <h1 className="modern-heading-xl text-gray-900 mb-6">
           System Summary
         </h1>
-        <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+        <p className="modern-text-secondary text-xl max-w-2xl mx-auto">
           Comprehensive overview of power system infrastructure and performance metrics
         </p>
       </div>
 
       {/* Key Metrics Section */}
-      <section className="mb-16">
-        <h2 className="text-3xl font-bold text-white mb-8 text-center">Key Performance Indicators</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="glass-card p-8 hover:scale-105 transition-all duration-300 text-center">
+      <section className="mb-6">
+        <h2 className="modern-heading-lg text-gray-900 mb-4 text-center">Key Performance Indicators</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="kpi-card hover:shadow-lg transition-all duration-300">
             <div className="mb-4">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-gray-300 mb-3">Total Sites</h3>
-              <p className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+              <h3 className="modern-heading-md text-gray-700 mb-3">Total Sites</h3>
+              <p className="text-5xl font-bold text-blue-600">
                 {summaryData.totalSites}
               </p>
             </div>
           </div>
 
-          <div className="glass-card p-8 hover:scale-105 transition-all duration-300 text-center">
+          <div className="kpi-card hover:shadow-lg transition-all duration-300">
             <div className="mb-4">
               <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-gray-300 mb-3">Avg. Headroom</h3>
-              <p className="text-5xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+              <h3 className="modern-heading-md text-gray-700 mb-3">Avg. Headroom</h3>
+              <p className="text-5xl font-bold text-green-600">
                 {summaryData.avgHeadroom} MW
               </p>
             </div>
           </div>
 
-          <div className="glass-card p-8 hover:scale-105 transition-all duration-300 text-center">
+          <div className="glass-card p-6 hover:scale-105 transition-all duration-300 text-center">
             <div className="mb-4">
               <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +225,7 @@ const SummaryPage = () => {
             </div>
           </div>
 
-          <div className="glass-card p-8 hover:scale-105 transition-all duration-300 text-center">
+          <div className="glass-card p-6 hover:scale-105 transition-all duration-300 text-center">
             <div className="mb-4">
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -242,10 +242,10 @@ const SummaryPage = () => {
       </section>
 
       {/* Site Status Overview */}
-      <section className="mb-16">
-        <h2 className="text-3xl font-bold text-white mb-8 text-center">Site Status Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="glass-card p-8 border-l-4 border-green-500 hover:scale-105 transition-all duration-300">
+      <section className="mb-6">
+        <h2 className="text-3xl font-bold text-white mb-4 text-center">Site Status Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="glass-card p-6 border-l-4 border-green-500 hover:scale-105 transition-all duration-300">
             <div className="flex items-center mb-4">
               <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mr-4">
                 <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +262,7 @@ const SummaryPage = () => {
             </p>
           </div>
 
-          <div className="glass-card p-8 border-l-4 border-yellow-500 hover:scale-105 transition-all duration-300">
+          <div className="glass-card p-6 border-l-4 border-yellow-500 hover:scale-105 transition-all duration-300">
             <div className="flex items-center mb-4">
               <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mr-4">
                 <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,7 +279,7 @@ const SummaryPage = () => {
             </p>
           </div>
 
-          <div className="glass-card p-8 border-l-4 border-red-500 hover:scale-105 transition-all duration-300">
+          <div className="glass-card p-6 border-l-4 border-red-500 hover:scale-105 transition-all duration-300">
             <div className="flex items-center mb-4">
               <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mr-4">
                 <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -299,10 +299,10 @@ const SummaryPage = () => {
       </section>
 
       {/* Distribution Analysis */}
-      <section className="mb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <section className="mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Voltage Distribution */}
-          <div className="glass-card p-8">
+          <div className="glass-card p-6">
             <div className="flex items-center mb-6">
               <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center mr-3">
                 <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,7 +327,7 @@ const SummaryPage = () => {
           </div>
 
           {/* Site Type Distribution */}
-          <div className="glass-card p-8">
+          <div className="glass-card p-6">
             <div className="flex items-center mb-6">
               <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,10 +356,10 @@ const SummaryPage = () => {
       </section>
 
       {/* Detailed Analytics */}
-      <section className="mb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <section className="mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Top Counties */}
-          <div className="glass-card p-8">
+          <div className="glass-card p-6">
             <div className="flex items-center mb-6">
               <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center mr-3">
                 <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,7 +387,7 @@ const SummaryPage = () => {
           </div>
 
           {/* Top Operators */}
-          <div className="glass-card p-8">
+          <div className="glass-card p-6">
             <div className="flex items-center mb-6">
               <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

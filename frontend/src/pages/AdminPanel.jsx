@@ -271,13 +271,13 @@ const AdminPanel = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto p-6">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent mb-8">
+      <div className="w-full px-4 py-6">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent mb-4">
           Admin Panel
         </h1>
 
         {/* Admin Navigation Tabs */}
-        <div className="mb-8">
+        <div className="mb-4">
           <nav className="flex flex-wrap gap-4">
             {adminTabs.map((tab) => (
               <button

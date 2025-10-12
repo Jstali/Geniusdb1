@@ -12,7 +12,13 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["jquery"],
+    include: [
+      "jquery",
+      "@mui/material",
+      "@mui/icons-material",
+      "@emotion/react",
+      "@emotion/styled",
+    ],
   },
   server: {
     proxy: {

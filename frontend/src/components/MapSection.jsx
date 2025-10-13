@@ -17,7 +17,9 @@ const getMarkerColor = (headroom) => {
 };
 
 // Custom marker icon component - using location pin symbol
-const createMarkerIcon = (color) => {
+const createMarkerIcon = (color, isClicked = false) => {
+  const scale = isClicked ? 1.8 : 1.2; // Larger scale when clicked
+  
   // Check if google.maps is available
   if (typeof google === "undefined" || !google || !google.maps) {
     // Fallback to location pin SVG path if Google Maps API is not loaded
@@ -26,8 +28,8 @@ const createMarkerIcon = (color) => {
       fillColor: color,
       fillOpacity: 1,
       strokeColor: "white",
-      strokeWeight: 2,
-      scale: 1.5,
+      strokeWeight: isClicked ? 3 : 2, // Thicker stroke when clicked
+      scale: scale,
       anchor: { x: 12, y: 24 }, // Anchor point at the bottom of the pin
     };
   }
@@ -38,8 +40,8 @@ const createMarkerIcon = (color) => {
     fillColor: color,
     fillOpacity: 1,
     strokeColor: "white",
-    strokeWeight: 2,
-    scale: 1.2,
+    strokeWeight: isClicked ? 3 : 2, // Thicker stroke when clicked
+    scale: scale,
     anchor: new google.maps.Point(12, 24), // Anchor point at the bottom of the pin
   };
 };
@@ -52,6 +54,7 @@ const MapSection = ({
   selectedColumns = [],
 }) => {
   const [markers, setMarkers] = useState([]);
+  const [clickedMarkerId, setClickedMarkerId] = useState(null); // Track which marker is clicked
   const [loading, setLoading] = useState(true); // Start with loading true
   const [error, setError] = useState(null);
   const [lastSuccessfulMarkers, setLastSuccessfulMarkers] = useState([]);
@@ -339,6 +342,45 @@ const MapSection = ({
           activeView={activeView}
           markers={markers}
         />
+        
+        {/* Info Button with Hover Popup */}
+        <div className="absolute top-4 right-4 z-10">
+          <div className="relative group">
+            {/* Info Button */}
+            <button
+              className="w-8 h-8 bg-white rounded-full shadow-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:shadow-xl transition-all duration-200"
+              title="Pin Color Legend"
+            >
+              <span className="text-sm font-bold">i</span>
+            </button>
+            
+            {/* Hover Popup */}
+            <div className="absolute top-10 right-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+              <div className="p-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">Pin Color Legend</h3>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0"></div>
+                    <span className="text-gray-700">Green - 50MW Generation Headroom and greater</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 rounded-full bg-orange-500 flex-shrink-0"></div>
+                    <span className="text-gray-700">Amber - 20MW to 50MW</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 rounded-full bg-red-500 flex-shrink-0"></div>
+                    <span className="text-gray-700">Red - Less than 20MW</span>
+                  </div>
+                </div>
+                <div className="mt-3 pt-2 border-t border-gray-100">
+                  <p className="text-xs text-gray-500">
+                    Risk level based on Generation Headroom values
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

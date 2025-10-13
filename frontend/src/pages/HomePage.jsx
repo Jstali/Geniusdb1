@@ -26,7 +26,7 @@ const HomePage = ({
   const [error, setError] = useState(null);
   const [columns, setColumns] = useState([]);
   const [selectedSite, setSelectedSite] = useState(null);
-  const [filteredTableData, setFilteredTableData] = useState([]); // Add state for filtered table data
+  const [filteredTableData, setFilteredTableData] = useState(null); // null means no table filters active
   const [tableFilters, setTableFilters] = useState({}); // Add state for table filters
   const [activeData, setActiveData] = useState([]); // Add state for active filtered dataset
   const [filters, setFilters] = useState({
@@ -61,9 +61,11 @@ const HomePage = ({
       });
       
       setActiveData(computedActiveData);
+      // Don't initialize filteredTableData here - let table control it
     } else {
       console.log("HomePage: No data available, setting activeData to empty array");
       setActiveData([]);
+      setFilteredTableData(null);
     }
   }, [data, tableViewConfig?.selectedColumns, tableViewConfig?.filters, activeView]);
 
@@ -164,12 +166,16 @@ const HomePage = ({
 
   // Handle filtered data changes from DataTable
   const handleFilteredDataChange = (filteredData) => {
-    console.log("HomePage: Received filtered data from DataTable", {
+    console.log("🔵 HomePage: Received filtered data from DataTable", {
       originalDataLength: data.length,
       filteredDataLength: filteredData.length,
-      sampleData: filteredData.slice(0, 3)
+      sampleData: filteredData.slice(0, 3),
+      timestamp: new Date().toISOString()
     });
+    // Always update filteredTableData - this drives the map updates
+    // Even if filteredData is empty array (0 results), we set it to show no pins
     setFilteredTableData(filteredData);
+    console.log("🟢 HomePage: filteredTableData state updated to", filteredData.length, "items - map should update now");
   };
 
   // Handle filter changes from DataTable
@@ -279,22 +285,26 @@ const HomePage = ({
         {/* Center - Map with extra width */}
         <div className="flex-grow transition-all duration-300">
           <div className="h-full rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl relative">
-            {console.log("HomePage: Passing data to CompactGoogleMapSimple:", {
-              dataLength: (activeData.length > 0 ? activeData : data).length,
+            {console.log("🗺️ HomePage: Passing data to CompactGoogleMapSimple:", {
+              filteredTableDataIsNull: filteredTableData === null,
+              filteredTableDataLength: filteredTableData?.length || 0,
               activeDataLength: activeData.length,
               rawDataLength: data.length,
               mapFilters,
               selectedColumns: tableViewConfig?.selectedColumns || [],
-              activeView
+              activeView,
+              dataToUse: filteredTableData !== null ? "filteredTableData" : (activeData.length > 0 ? "activeData" : "rawData"),
+              actualDataLength: filteredTableData !== null ? filteredTableData.length : (activeData.length > 0 ? activeData.length : data.length)
             })}
             <CompactGoogleMapSimple
               isHomePage={true}
-              data={activeData.length > 0 ? activeData : data} // Use activeData if available, otherwise fallback to raw data
+              data={filteredTableData !== null ? filteredTableData : (activeData.length > 0 ? activeData : data)} // Use filtered table data if set (even if empty), then activeData, then raw data
               filters={mapFilters}
               selectedColumns={tableViewConfig?.selectedColumns || []}
               onMarkerClick={handleMarkerClick}
               activeView={activeView} // Pass active view to map component
               locationColumn={tableViewConfig?.mapConfig?.locationColumn || "Site Name"}
+              useTableFilters={true}
             />
           </div>
         </div>

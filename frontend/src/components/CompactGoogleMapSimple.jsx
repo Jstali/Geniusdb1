@@ -38,6 +38,7 @@ const CompactGoogleMapSimple = ({
   selectedColumns = [],
   activeView = null,
   locationColumn = "Site Name",
+  useTableFilters = true, // New prop to control whether to use pre-filtered data
 }) => {
   const [markers, setMarkers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -48,21 +49,52 @@ const CompactGoogleMapSimple = ({
     dataLength: data?.length || 0,
     activeView,
     selectedColumns,
-    locationColumn
+    locationColumn,
+    useTableFilters,
+    hasFilters: Object.keys(filters || {}).some(key => filters[key] && filters[key] !== "")
   });
 
   // Apply filters to data and create markers
+  // If useTableFilters is true, ALWAYS use data as-is (already filtered by table)
+  // Only apply sidebar filters when explicitly set
   const filteredData = useMemo(() => {
-    console.log("CompactGoogleMapSimple: Applying filters", {
+    console.log("CompactGoogleMapSimple: Processing data", {
       originalDataLength: data.length,
       filters,
-      sampleFilters: filters
+      useTableFilters,
+      sampleFilters: filters,
+      dataPreview: data.slice(0, 2)
     });
 
     if (!data || data.length === 0) {
+      console.log("CompactGoogleMapSimple: No data provided, returning empty array");
       return [];
     }
 
+    // Check if sidebar filters are active
+    const hasSidebarFilters = 
+      (filters.siteName && filters.siteName.trim() !== "") ||
+      (filters.voltage && filters.voltage !== "") ||
+      (filters.powerRange && filters.powerRange.min !== undefined && filters.powerRange.min > 0) ||
+      (filters.operators && filters.operators !== "");
+
+    console.log("CompactGoogleMapSimple: Sidebar filters status:", {
+      hasSidebarFilters,
+      siteName: filters.siteName || "none",
+      voltage: filters.voltage || "none",
+      powerRange: filters.powerRange?.min || "none",
+      operators: filters.operators || "none"
+    });
+
+    // PRIORITY 1: If using table filters and no sidebar filters, use data directly
+    if (useTableFilters && !hasSidebarFilters) {
+      console.log("CompactGoogleMapSimple: ✅ Using pre-filtered TABLE data directly (no sidebar filters active)");
+      console.log("CompactGoogleMapSimple: Returning", data.length, "sites from table filter");
+      return data; // Data is already filtered by the table
+    }
+
+    // PRIORITY 2: Apply sidebar filters
+    console.log("CompactGoogleMapSimple: Applying SIDEBAR filters to data");
     let filtered = [...data];
 
     // Apply site name filter
@@ -104,7 +136,7 @@ const CompactGoogleMapSimple = ({
 
     console.log("CompactGoogleMapSimple: Final filtered data length:", filtered.length);
     return filtered;
-  }, [data, filters]);
+  }, [data, filters, useTableFilters]);
 
   // Process filtered data to create markers
   useEffect(() => {
@@ -145,7 +177,7 @@ const CompactGoogleMapSimple = ({
   };
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
       <GoogleMapComponent
         markers={markers}
         onMarkerClick={handleMarkerClick}
@@ -154,6 +186,45 @@ const CompactGoogleMapSimple = ({
         error={error}
         mapConfig={homePageMapConfig}
       />
+      
+      {/* Info Button with Hover Popup */}
+      <div className="absolute top-4 right-4 z-10">
+        <div className="relative group">
+          {/* Info Button */}
+          <button
+            className="w-8 h-8 bg-white rounded-full shadow-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:shadow-xl transition-all duration-200"
+            title="Pin Color Legend"
+          >
+            <span className="text-sm font-bold">i</span>
+          </button>
+          
+          {/* Hover Popup */}
+          <div className="absolute top-10 right-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+            <div className="p-4">
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">Pin Color Legend</h3>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0"></div>
+                    <span className="text-gray-700">Green - 50MW Generation Headroom and greater</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 rounded-full bg-orange-500 flex-shrink-0"></div>
+                    <span className="text-gray-700">Amber - 20MW to 50MW</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 rounded-full bg-red-500 flex-shrink-0"></div>
+                    <span className="text-gray-700">Red - Less than 20MW</span>
+                  </div>
+                </div>
+              <div className="mt-3 pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500">
+                  Risk level based on Generation Headroom values
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

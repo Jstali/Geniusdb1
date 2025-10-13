@@ -20,7 +20,7 @@ const Sidebar = ({
   return (
     <>
       <aside className={`bg-white shadow-md overflow-x-auto z-10 ${className}`}>
-        <nav className="px-6 py-4 flex justify-between items-center">
+        <nav className="px-6 pt-0 pb-4 flex justify-between items-center">
           <ul className="flex space-x-4">
             {menuItems.map((item) => (
               <li key={item}>

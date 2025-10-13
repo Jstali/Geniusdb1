@@ -186,13 +186,13 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
 
             {/* BSP (Bulk Supply Point) */}
             <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600 font-medium">BSP:</span>
+              <span className="text-gray-600 font-medium">Bulk Supply Point:</span>
               <span className="font-medium text-gray-800">{bsp}</span>
             </div>
 
             {/* GSP (Grid Supply Point) */}
             <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600 font-medium">GSP:</span>
+              <span className="text-gray-600 font-medium">Grid Supply Point:</span>
               <span className="font-medium text-gray-800">{gsp}</span>
             </div>
 
@@ -208,7 +208,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
 
             {/* Gen Capacity (Generation Capacity) */}
             <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600 font-medium">Gen Capacity:</span>
+              <span className="text-gray-600 font-medium">Generative Capacity:</span>
               <span className="font-medium text-gray-800">
                 {genCapacity !== null && genCapacity !== undefined
                   ? `${parseFloat(genCapacity).toFixed(2)} MW`

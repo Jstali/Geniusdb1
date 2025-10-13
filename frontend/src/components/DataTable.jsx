@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-table";
 import PivotConfigPanel from "./PivotConfigPanel";
 import PivotTableView from "./PivotTableView";
+import DraggableTableHeader from "./DraggableTableHeader";
 
 // Utility function to handle missing values based on inferred data types
 const handleMissingValue = (value, columnName) => {
@@ -103,6 +104,8 @@ const DataTable = ({
   const [isPivotMode, setIsPivotMode] = useState(false);
   const [pivotConfig, setPivotConfig] = useState(null);
   const [pivotError, setPivotError] = useState(null);
+  // Column reordering state
+  const [columnOrder, setColumnOrder] = useState([]);
 
   // Refs
   const tableRef = useRef(null);
@@ -140,6 +143,45 @@ const DataTable = ({
       setColumnSizes(initialSizes);
     }
   }, [columns]);
+
+  // Initialize column order from localStorage or default order
+  useEffect(() => {
+    if (columns.length > 0 && columnOrder.length === 0) {
+      const savedOrder = localStorage.getItem('geniusdb-column-order');
+      if (savedOrder) {
+        try {
+          const parsedOrder = JSON.parse(savedOrder);
+          // Validate that saved order contains valid column IDs
+          const validOrder = parsedOrder.filter(columnId => 
+            columns.some(col => col.accessorKey === columnId)
+          );
+          // Add any missing columns to the end
+          const missingColumns = columns
+            .filter(col => !validOrder.includes(col.accessorKey))
+            .map(col => col.accessorKey);
+          setColumnOrder([...validOrder, ...missingColumns]);
+        } catch (error) {
+          console.warn('Failed to parse saved column order:', error);
+          setColumnOrder(columns.map(col => col.accessorKey));
+        }
+      } else {
+        setColumnOrder(columns.map(col => col.accessorKey));
+      }
+    }
+  }, [columns, columnOrder.length]);
+
+  // Save column order to localStorage when it changes
+  useEffect(() => {
+    if (columnOrder.length > 0) {
+      localStorage.setItem('geniusdb-column-order', JSON.stringify(columnOrder));
+    }
+  }, [columnOrder]);
+
+  // Handle column reordering
+  const handleColumnReorder = (newColumnOrder) => {
+    console.log('DataTable: Column reordered', { old: columnOrder, new: newColumnOrder });
+    setColumnOrder(newColumnOrder);
+  };
 
   // Apply column visibility based on selected columns
   useEffect(() => {
@@ -656,6 +698,42 @@ const DataTable = ({
     return DEFAULT_COLUMN_WIDTH;
   };
 
+  // Get unique values for a column (for filter dropdowns)
+  const getUniqueValues = (columnId) => {
+    if (!data || !columnId) return [];
+    
+    const uniqueValues = [
+      ...new Set(data.map((row) => row[columnId]))
+    ].filter((val) => val !== null && val !== undefined && val !== "");
+    
+    return uniqueValues.sort();
+  };
+
+  // Handle select all change for filter dropdowns
+  const handleSelectAllChange = (columnId, isChecked) => {
+    if (isChecked) {
+      // Select all unique values
+      const allValues = getUniqueValues(columnId);
+      setColumnMultiSelectValues((prev) => ({
+        ...prev,
+        [columnId]: allValues,
+      }));
+      setColumnFilters((prevFilters) => {
+        const otherFilters = prevFilters.filter((f) => f.id !== columnId);
+        return [...otherFilters, { id: columnId, value: allValues }];
+      });
+    } else {
+      // Deselect all
+      setColumnMultiSelectValues((prev) => ({
+        ...prev,
+        [columnId]: [],
+      }));
+      setColumnFilters((prevFilters) =>
+        prevFilters.filter((f) => f.id !== columnId)
+      );
+    }
+  };
+
   // Handle row click
   const handleRowClick = (row) => {
     const rowId = row.original.id || row.id;
@@ -1010,164 +1088,29 @@ const DataTable = ({
                 className="min-w-full divide-y divide-gray-200"
                 ref={tableRef}
               >
-                <thead className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-md sticky top-0 z-10">
-                  <tr>
-                    {table.getHeaderGroups()[0].headers.map((header) => {
-                      const columnId = header.column.columnDef.accessorKey;
-                      const hasFilter = columnFilters.some(
-                        (f) => f.id === columnId
-                      );
-                      const sortDirection = header.column.getIsSorted();
-                      // Use consistent column sizing
-                      const columnSize = getColumnSize(columnId);
-
-                      return (
-                        <th
-                          key={header.id}
-                          className="text-left text-xs font-medium text-white uppercase tracking-wider border-r border-blue-700 last:border-r-0 relative group"
-                          style={{
-                            width: `${columnSize}px`,
-                            minWidth: `${MIN_COLUMN_WIDTH}px`,
-                            maxWidth: `${MAX_COLUMN_WIDTH}px`,
-                          }}
-                        >
-                          <div className="flex items-center justify-between h-full">
-                            <div
-                              className="flex items-center cursor-pointer hover:text-blue-200 px-4 py-3 flex-1"
-                              onClick={header.column.getToggleSortingHandler()}
-                            >
-                              <span className="mr-2 truncate">
-                                {flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                              </span>
-                              {sortDirection === "asc" && (
-                                <span className="text-blue-200">↑</span>
-                              )}
-                              {sortDirection === "desc" && (
-                                <span className="text-blue-200">↓</span>
-                              )}
-                              {!sortDirection && (
-                                <span className="text-blue-300">↕</span>
-                              )}
-                            </div>
-
-                            {/* Resize Handle */}
-                            <div
-                              className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-blue-400 hover:bg-blue-300 opacity-0 group-hover:opacity-100"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                setIsResizing(columnId);
-                              }}
-                            />
-                          </div>
-
-                          {/* Filter Button - moved to second row */}
-                          {columnId && (
-                            <div className="absolute right-2 bottom-2">
-                              <div
-                                className="relative"
-                                ref={(el) =>
-                                  (dropdownRefs.current[columnId] = el)
-                                }
-                              >
-                                <button
-                                  onClick={() => toggleDropdown(columnId)}
-                                  className={`p-1 rounded hover:bg-blue-500 ${
-                                    hasFilter
-                                      ? "text-blue-200 bg-blue-700"
-                                      : "text-blue-300"
-                                  }`}
-                                >
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                </button>
-
-                                {/* Filter Dropdown */}
-                                {openDropdowns[columnId] && (
-                                  <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
-                                    <div className="p-2">
-                                      <div className="pb-2 border-b border-gray-200 mb-2">
-                                        <p className="text-sm font-medium text-gray-700">
-                                          Filter by{" "}
-                                          {header.column.columnDef.header}
-                                        </p>
-                                      </div>
-
-                                      {/* Select All Option */}
-                                      <label className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer ">
-                                        <input
-                                          type="checkbox"
-                                          checked={
-                                            columnMultiSelectValues[columnId]
-                                              ?.length ===
-                                              getColumnFilterOptions[columnId]
-                                                ?.length &&
-                                            getColumnFilterOptions[columnId]
-                                              ?.length > 0
-                                          }
-                                          onChange={(e) =>
-                                            handleMultiSelectChange(
-                                              columnId,
-                                              "SELECT_ALL",
-                                              e.target.checked
-                                            )
-                                          }
-                                          className="mr-2 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                        />
-                                        <span className="text-sm text-gray-700">
-                                          Select All
-                                        </span>
-                                      </label>
-
-                                      {/* Filter Options */}
-                                      {getColumnFilterOptions[columnId]?.map(
-                                        (value) => (
-                                          <label
-                                            key={value}
-                                            className="flex items-center px-2 py-1 hover:bg-gray-50 cursor-pointer"
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              checked={columnMultiSelectValues[
-                                                columnId
-                                              ]?.includes(value)}
-                                              onChange={(e) =>
-                                                handleMultiSelectChange(
-                                                  columnId,
-                                                  value,
-                                                  e.target.checked
-                                                )
-                                              }
-                                              className="mr-2 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                            />
-                                            <span className="text-sm text-gray-700 truncate">
-                                              {value}
-                                            </span>
-                                          </label>
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
+                <DraggableTableHeader
+                  table={table}
+                  columnFilters={columnFilters}
+                  onColumnReorder={handleColumnReorder}
+                  onSort={(header) => header.column.getToggleSortingHandler()}
+                  onFilter={(columnId) => toggleDropdown(columnId)}
+                  onResize={(e, columnId) => {
+                    e.preventDefault();
+                    setIsResizing(columnId);
+                  }}
+                  getColumnSize={getColumnSize}
+                  MIN_COLUMN_WIDTH={MIN_COLUMN_WIDTH}
+                  MAX_COLUMN_WIDTH={MAX_COLUMN_WIDTH}
+                  columnOrder={columnOrder}
+                  setColumnOrder={setColumnOrder}
+                  openDropdowns={openDropdowns}
+                  toggleDropdown={toggleDropdown}
+                  columnMultiSelectValues={columnMultiSelectValues}
+                  getUniqueValues={getUniqueValues}
+                  handleSelectAllChange={handleSelectAllChange}
+                  handleMultiSelectChange={handleMultiSelectChange}
+                  dropdownRefs={dropdownRefs}
+                />
                 <tbody className="bg-white divide-y divide-gray-200">
                   {/* Actual Data Rows */}
                   {table.getRowModel().rows.map((row, idx) => {
@@ -1183,8 +1126,12 @@ const DataTable = ({
                         } hover:bg-blue-50 ${isSelected ? "bg-yellow-100" : ""}`}
                         onClick={() => handleRowClick(row)}
                       >
-                        {row.getVisibleCells().map((cell) => {
-                          const columnId = cell.column.columnDef.accessorKey;
+                        {columnOrder.map((columnId) => {
+                          const cell = row.getVisibleCells().find(
+                            (c) => c.column.columnDef.accessorKey === columnId
+                          );
+                          if (!cell) return null;
+                          
                           // Use consistent column sizing
                           const columnSize = getColumnSize(columnId);
 

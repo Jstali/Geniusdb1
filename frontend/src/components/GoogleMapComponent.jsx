@@ -43,6 +43,7 @@ const GoogleMapComponent = ({
   showMarkers = true, // New prop to control marker visibility
 }) => {
   const [selectedMarker, setSelectedMarker] = useState(null);
+  const [clickedMarkerId, setClickedMarkerId] = useState(null); // Track which marker is clicked
   const [map, setMap] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,8 +74,10 @@ const GoogleMapComponent = ({
     }
   }, []);
 
-  // Create custom marker icon based on color - using location pin symbol
-  const createMarkerIcon = useCallback((color) => {
+  // Create custom marker icon based on color and size - using location pin symbol
+  const createMarkerIcon = useCallback((color, isClicked = false) => {
+    const scale = isClicked ? 1.8 : 1.2; // Larger scale when clicked
+    
     // Check if google.maps is available
     if (typeof google === "undefined" || !google || !google.maps) {
       // Fallback to location pin SVG path if Google Maps API is not loaded
@@ -84,8 +87,8 @@ const GoogleMapComponent = ({
         fillColor: color,
         fillOpacity: 1,
         strokeColor: "white",
-        strokeWeight: 2,
-        scale: 1.5,
+        strokeWeight: isClicked ? 3 : 2, // Thicker stroke when clicked
+        scale: scale,
         anchor: { x: 12, y: 24 }, // Anchor point at the bottom of the pin
       };
     }
@@ -96,8 +99,8 @@ const GoogleMapComponent = ({
       fillColor: color,
       fillOpacity: 1,
       strokeColor: "white",
-      strokeWeight: 2,
-      scale: 1.2,
+      strokeWeight: isClicked ? 3 : 2, // Thicker stroke when clicked
+      scale: scale,
       anchor: new google.maps.Point(12, 24), // Anchor point at the bottom of the pin
     };
   }, []);
@@ -272,6 +275,7 @@ const GoogleMapComponent = ({
     (marker) => {
       console.log("Marker clicked:", marker);
       setSelectedMarker(marker);
+      setClickedMarkerId(marker.id); // Track which marker is clicked
       if (onMarkerClick) {
         onMarkerClick(marker);
       }
@@ -282,6 +286,7 @@ const GoogleMapComponent = ({
   const handleMapClick = useCallback(() => {
     console.log("Map clicked, closing info window");
     setSelectedMarker(null);
+    setClickedMarkerId(null); // Reset clicked marker
     if (onMarkerClick) {
       onMarkerClick(null);
     }
@@ -358,11 +363,12 @@ const GoogleMapComponent = ({
           }
 
           console.log("Rendering marker:", marker);
+          const isClicked = clickedMarkerId === marker.id;
           return (
             <Marker
               key={marker.id}
               position={marker.position}
-              icon={createMarkerIcon(marker.color)}
+              icon={createMarkerIcon(marker.color, isClicked)}
               onClick={() => handleMarkerClick(marker)}
             />
           );

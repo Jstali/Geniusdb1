@@ -11,63 +11,25 @@ import PivotConfigPanel from "./PivotConfigPanel";
 import PivotTableView from "./PivotTableView";
 import DraggableTableHeader from "./DraggableTableHeader";
 
-// Utility function to handle missing values based on inferred data types
-const handleMissingValue = (value, columnName) => {
-  // If the value is valid (not null, undefined, or empty string), return it as is
-  if (value !== null && value !== undefined && value !== "") {
-    return value;
-  }
-
-  // For missing values, we need to infer the type
-  // Since we don't have explicit type information, we'll use heuristics:
-
-  // Common numeric columns (based on naming patterns)
-  const numericColumnPatterns = [
-    /headroom/i,
-    /capacity/i,
-    /power/i,
-    /voltage/i,
-    /demand/i,
-    /rating/i,
-    /mw$/i,
-    /kv$/i,
-    /mva$/i,
-    /ohm$/i,
-    /percentage/i,
-    /count/i,
-    /year/i,
-    /size/i,
-    /amount/i,
-    /value/i,
-    /number/i,
-    /total/i,
-    /sum/i,
-    /average/i,
-    /min/i,
-    /max/i,
-    /temperature/i,
-    /frequency/i,
-  ];
-
-  // Check if this is likely a numeric column
-  const isLikelyNumeric = numericColumnPatterns.some((pattern) =>
-    pattern.test(columnName.replace(/[^a-zA-Z0-9]/g, ""))
-  );
-
-  // Return appropriate default based on inferred type
-  if (isLikelyNumeric) {
-    return 0; // For numeric columns, return 0
-  } else {
-    return "null"; // For string columns, return "null"
-  }
-};
-
-// Custom cell renderer that handles missing values
+// Custom cell renderer that handles all values including null and zero
 const renderCellContent = (value, columnName) => {
-  const processedValue = handleMissingValue(value, columnName);
-  return processedValue === null || processedValue === undefined
-    ? ""
-    : String(processedValue);
+  // Handle null and undefined explicitly
+  if (value === null || value === undefined) {
+    return "null";
+  }
+  
+  // Handle empty string
+  if (value === "") {
+    return "";
+  }
+  
+  // Handle zero explicitly (important: 0 should display as "0")
+  if (value === 0 || value === "0") {
+    return "0";
+  }
+  
+  // Handle all other values by converting to string
+  return String(value);
 };
 
 const DataTable = ({
@@ -94,7 +56,6 @@ const DataTable = ({
     pageSize: 10,
   });
   const [columnSizes, setColumnSizes] = useState({});
-  const [isResizing, setIsResizing] = useState(null);
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [openDropdowns, setOpenDropdowns] = useState({});
   const [columnMultiSelectValues, setColumnMultiSelectValues] = useState({});
@@ -333,6 +294,9 @@ const DataTable = ({
     ...col,
     filterFn: col.accessorKey ? "multiSelect" : undefined,
     size: DEFAULT_COLUMN_WIDTH, // Set default size for TanStack table
+    enableResizing: true, // Enable column resizing
+    minSize: MIN_COLUMN_WIDTH, // Set minimum column width
+    maxSize: MAX_COLUMN_WIDTH, // Set maximum column width
     cell: ({ getValue }) => {
       const value = getValue();
       return renderCellContent(value, col.accessorKey);
@@ -348,12 +312,14 @@ const DataTable = ({
       sorting,
       pagination,
       columnVisibility,
+      columnSizing: columnSizes,
     },
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     onColumnVisibilityChange: handleColumnVisibilityChange, // Use our custom handler
+    onColumnSizingChange: setColumnSizes, // Add column sizing handler
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -373,7 +339,8 @@ const DataTable = ({
           .includes(String(filterValues).toLowerCase());
       },
     },
-    columnResizeMode: "onChange",
+    columnResizeMode: "onChange", // Enable real-time column resizing
+    enableColumnResizing: true, // Enable column resizing
     debugTable: false,
   });
 
@@ -500,14 +467,16 @@ const DataTable = ({
             data.map((row) => {
               const value = row[column.accessorKey];
               // Handle different data types
-              if (value === null || value === undefined) return "";
+              if (value === null || value === undefined) return "null";
+              if (value === 0 || value === "0") return "0";
+              if (value === "") return "";
               if (typeof value === "object") return JSON.stringify(value);
               return String(value);
             })
           ),
         ];
         options[column.accessorKey] = uniqueValues
-          .filter((val) => val !== null && val !== undefined && val !== "")
+          .filter((val) => val !== undefined && val !== "")
           .slice(0, 500)
           .sort((a, b) => String(a).localeCompare(String(b)));
       }
@@ -584,34 +553,7 @@ const DataTable = ({
     };
   }, []);
 
-  // Handle mouse events for column resizing
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isResizing) return;
-
-      setColumnSizes((prev) => ({
-        ...prev,
-        [isResizing]: Math.min(
-          MAX_COLUMN_WIDTH,
-          Math.max(MIN_COLUMN_WIDTH, prev[isResizing] + e.movementX)
-        ),
-      }));
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(null);
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing]);
+  // Note: Custom mouse event handlers removed - TanStack Table handles resizing internally
 
   // Toggle dropdown visibility
   const toggleDropdown = (columnId) => {
@@ -689,7 +631,15 @@ const DataTable = ({
 
   // Calculate column size with fallback to default width
   const getColumnSize = (columnId) => {
-    // If we have a specific size for this column, use it
+    // Use TanStack Table's column sizing if available
+    if (table) {
+      const column = table.getColumn(columnId);
+      if (column?.getSize) {
+        return column.getSize();
+      }
+    }
+    
+    // Fallback to our custom state
     if (columnSizes[columnId]) {
       return columnSizes[columnId];
     }
@@ -703,8 +653,15 @@ const DataTable = ({
     if (!data || !columnId) return [];
     
     const uniqueValues = [
-      ...new Set(data.map((row) => row[columnId]))
-    ].filter((val) => val !== null && val !== undefined && val !== "");
+      ...new Set(data.map((row) => {
+        const val = row[columnId];
+        // Convert null/undefined to "null" for display
+        if (val === null || val === undefined) return "null";
+        // Ensure zero is included
+        if (val === 0 || val === "0") return "0";
+        return val;
+      }))
+    ].filter((val) => val !== undefined && val !== "");
     
     return uniqueValues.sort();
   };
@@ -1087,6 +1044,7 @@ const DataTable = ({
               <table
                 className="min-w-full divide-y divide-gray-200"
                 ref={tableRef}
+                style={{ tableLayout: 'fixed', width: '100%' }}
               >
                 <DraggableTableHeader
                   table={table}
@@ -1094,10 +1052,7 @@ const DataTable = ({
                   onColumnReorder={handleColumnReorder}
                   onSort={(header) => header.column.getToggleSortingHandler()}
                   onFilter={(columnId) => toggleDropdown(columnId)}
-                  onResize={(e, columnId) => {
-                    e.preventDefault();
-                    setIsResizing(columnId);
-                  }}
+                  onColumnSizingChange={setColumnSizes}
                   getColumnSize={getColumnSize}
                   MIN_COLUMN_WIDTH={MIN_COLUMN_WIDTH}
                   MAX_COLUMN_WIDTH={MAX_COLUMN_WIDTH}
@@ -1113,7 +1068,7 @@ const DataTable = ({
                 />
                 <tbody className="bg-white divide-y divide-gray-200">
                   {/* Actual Data Rows */}
-                  {table.getRowModel().rows.map((row, idx) => {
+                  {table.getPaginationRowModel().rows.map((row, idx) => {
                     const rowId = row.original.id || row.id;
                     const isSelected = selectedRowId === rowId;
 
@@ -1166,10 +1121,10 @@ const DataTable = ({
                     length: Math.max(
                       0,
                       table.getState().pagination.pageSize -
-                        table.getRowModel().rows.length
+                        table.getPaginationRowModel().rows.length
                     ),
                   }).map((_, placeholderIdx) => {
-                    const actualRowCount = table.getRowModel().rows.length;
+                    const actualRowCount = table.getPaginationRowModel().rows.length;
                     const isEvenRow = (actualRowCount + placeholderIdx) % 2 === 0;
 
                     return (

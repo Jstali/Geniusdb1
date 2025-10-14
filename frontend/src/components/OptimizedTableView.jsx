@@ -11,30 +11,25 @@ import PivotConfigPanel from "./PivotConfigPanel";
 import PivotTableView from "./PivotTableView";
 import useApiCache from "../hooks/useApiCache";
 
-// Utility function to handle missing values based on inferred data types
-const handleMissingValue = (value, columnName) => {
-  if (value !== null && value !== undefined && value !== "") {
-    return value;
-  }
-
-  const numericColumnPatterns = [
-    /headroom/i, /capacity/i, /power/i, /voltage/i, /demand/i,
-    /rating/i, /mw$/i, /kv$/i, /mva$/i, /ohm$/i, /percentage/i,
-    /count/i, /year/i, /size/i, /amount/i, /value/i, /number/i,
-    /total/i, /sum/i, /average/i, /min/i, /max/i, /temperature/i, /frequency/i,
-  ];
-
-  const isLikelyNumeric = numericColumnPatterns.some((pattern) =>
-    pattern.test(columnName.replace(/[^a-zA-Z0-9]/g, ""))
-
-  return isLikelyNumeric ? 0 : "null";
-};
-
+// Custom cell renderer that handles all values including null and zero
 const renderCellContent = (value, columnName) => {
-  const processedValue = handleMissingValue(value, columnName);
-  return processedValue === null || processedValue === undefined
-    ? ""
-    : String(processedValue);
+  // Handle null and undefined explicitly
+  if (value === null || value === undefined) {
+    return "null";
+  }
+  
+  // Handle empty string
+  if (value === "") {
+    return "";
+  }
+  
+  // Handle zero explicitly (important: 0 should display as "0")
+  if (value === 0 || value === "0") {
+    return "0";
+  }
+  
+  // Handle all other values by converting to string
+  return String(value);
 };
 
 const OptimizedTableView = ({

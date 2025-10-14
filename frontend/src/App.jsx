@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import ExcelTableDemo from "./pages/ExcelTableDemo";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/*" element={<Dashboard />} />
+          <Route path="/excel-table" element={<ExcelTableDemo />} />
         </Routes>
       </div>
     </Router>

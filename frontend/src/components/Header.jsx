@@ -26,11 +26,14 @@ const Header = ({
           {/* Left: Title */}
           <div className="flex items-center ">
             <img 
-              src="/geniusdb2.png" 
-              alt="Genius DB Logo" 
-              className="w-16 h-16 mr-3 object-contain"
+              src="/genius.jpeg" 
+              alt="GeniusDB - Intelligent Grid Data" 
+              className="w-20 h-16 mr-4 object-contain"
             />
-            <h1 className="text-2xl font-bold text-blue-600">GeniusDB</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-blue-600">GeniusDB</h1>
+              <p className="text-xs text-gray-500 -mt-1">Intelligent Grid Data</p>
+            </div>
           </div>
 
           {/* Right: children or logout */}

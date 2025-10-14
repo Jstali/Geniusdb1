@@ -55,21 +55,13 @@ export const applyFilters = (data, filters = {}, selectedColumns = []) => {
 
   // Apply column selection filter (only include rows that have data for selected columns)
   // Only apply this filter if we have selected columns AND we're in a saved view context
+  // For now, let's be less restrictive and only filter out rows with completely missing data
   if (selectedColumns && selectedColumns.length > 0) {
-    const locationColumns = ["latitude", "longitude", "site_name", "Spatial Coordinates"];
-    const requiredColumns = [...selectedColumns, ...locationColumns];
-    
+    // Only filter out rows that are completely missing essential data
+    // Don't filter based on selected columns as this is too restrictive
     filteredData = filteredData.filter(row => {
-      return requiredColumns.every(col => {
-        if (col === "latitude" || col === "longitude" || col === "site_name") {
-          // These are always available or can be derived
-          return true;
-        }
-        
-        // Check if the row has data for this column
-        const value = row[col];
-        return value !== null && value !== undefined && value !== "" && value !== "\\N";
-      });
+      // Only require that the row has some basic identifying information
+      return row.id || row["Site Name"] || row.site_name || row["Spatial Coordinates"];
     });
   }
   // If no selectedColumns, return all data (for home page default view)

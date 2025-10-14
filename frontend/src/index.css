@@ -117,3 +117,78 @@ body {
     font-family: 'Inter', sans-serif;
   }
 }
+
+/* Column resizing styles for TanStack Table */
+.resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 6px;
+  background: rgba(59, 130, 246, 0.3);
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.resizer:hover {
+  opacity: 1;
+  background: #3b82f6;
+}
+
+.resizer.isResizing {
+  background: #3b82f6;
+  opacity: 1;
+}
+
+/* Ensure smooth column resizing */
+th[data-resizing="true"] {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Prevent text selection during resize */
+th[data-resizing="true"] * {
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Excel-like table resizing styles */
+.excel-table th {
+  position: relative;
+}
+
+.excel-table th .resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background: transparent;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.excel-table th:hover .resize-handle {
+  opacity: 1;
+  background: #3b82f6;
+}
+
+.excel-table th .resize-handle:hover {
+  background: #2563eb;
+}
+
+/* Smooth column resizing */
+.excel-table th[data-resizing="true"] {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.excel-table th[data-resizing="true"] * {
+  user-select: none;
+  pointer-events: none;
+}

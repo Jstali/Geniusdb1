@@ -331,8 +331,8 @@ const HomePage = ({
           </div>
         ) : (
         <DataTable
-          key={`table-${activeView || 'default'}-${JSON.stringify(tableViewConfig?.selectedColumns || [])}`} // Force re-render when view changes
-          data={activeData.length > 0 ? activeData : data} // Use activeData if available, otherwise fallback to raw data
+          key={`table-${activeView || 'default'}`} // Only re-render when activeView changes, not when columns change
+          data={activeView ? activeData : data} // Use activeData only when there's an active view, otherwise use raw data
           columns={columns}
           selectedColumns={tableViewConfig?.selectedColumns || []} // Pass empty array when no columns selected
           onSelectedColumnsChange={handleSelectedColumnsChange}

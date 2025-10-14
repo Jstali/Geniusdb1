@@ -26,8 +26,8 @@ const DraggableHeaderCell = ({
   sortDirection, 
   columnSize, 
   onSort, 
-  onFilter, 
-  onResize,
+  onFilter,
+  onColumnSizingChange,
   MIN_COLUMN_WIDTH,
   MAX_COLUMN_WIDTH,
   openDropdowns,
@@ -62,6 +62,7 @@ const DraggableHeaderCell = ({
         minWidth: `${MIN_COLUMN_WIDTH}px`,
         maxWidth: `${MAX_COLUMN_WIDTH}px`,
       }}
+      data-resizing={header.column.getIsResizing()}
       className={`text-left text-xs font-medium text-white uppercase tracking-wider border-r border-blue-700 last:border-r-0 relative group ${
         isDragging ? 'z-50' : ''
       }`}
@@ -77,6 +78,7 @@ const DraggableHeaderCell = ({
             {...listeners}
             className="mr-2 cursor-grab active:cursor-grabbing text-blue-200 hover:text-white"
             title="Drag to reorder column"
+            onMouseDown={(e) => e.stopPropagation()}
           >
             ⋮⋮
           </div>
@@ -98,8 +100,44 @@ const DraggableHeaderCell = ({
 
         {/* Resize Handle */}
         <div
-          className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-blue-400 hover:bg-blue-300 opacity-0 group-hover:opacity-100"
-          onMouseDown={onResize}
+          className={`resizer ${
+            header.column.getIsResizing() ? 'isResizing' : ''
+          }`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Resize started for column:', columnId);
+            const startX = e.clientX;
+            const startWidth = header.column.getSize();
+            console.log('Start width:', startWidth);
+            
+            const handleMouseMove = (e) => {
+              const newWidth = startWidth + (e.clientX - startX);
+              const constrainedWidth = Math.max(50, Math.min(800, newWidth));
+              console.log('New width:', constrainedWidth);
+              
+              // Use the table's column sizing state setter
+              if (onColumnSizingChange) {
+                onColumnSizingChange(prev => {
+                  const newSizes = {
+                    ...prev,
+                    [columnId]: constrainedWidth
+                  };
+                  console.log('Updating column sizes:', newSizes);
+                  return newSizes;
+                });
+              }
+            };
+            
+            const handleMouseUp = () => {
+              console.log('Resize ended for column:', columnId);
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
         />
 
         {/* Filter Button */}
@@ -212,7 +250,7 @@ const DraggableTableHeader = ({
   onColumnReorder,
   onSort,
   onFilter,
-  onResize,
+  onColumnSizingChange,
   getColumnSize,
   MIN_COLUMN_WIDTH,
   MAX_COLUMN_WIDTH,
@@ -283,7 +321,7 @@ const DraggableTableHeader = ({
                   columnSize={columnSize}
                   onSort={header.column.getToggleSortingHandler()}
                   onFilter={() => onFilter(columnId)}
-                  onResize={(e) => onResize(e, columnId)}
+                  onColumnSizingChange={onColumnSizingChange}
                   MIN_COLUMN_WIDTH={MIN_COLUMN_WIDTH}
                   MAX_COLUMN_WIDTH={MAX_COLUMN_WIDTH}
                   openDropdowns={openDropdowns}

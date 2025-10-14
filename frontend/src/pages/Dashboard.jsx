@@ -31,7 +31,8 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchColumns = async () => {
       try {
-        const response = await fetch("/data/columns");
+        const API_BASE = (window._env_ && window._env_.API_BASE) || "";
+        const response = await fetch(`${API_BASE}/data/columns`);
         if (response.ok) {
           const data = await response.json();
           // Extract column objects from the data structure

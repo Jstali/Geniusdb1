@@ -82,8 +82,7 @@ const TableView = ({ updateTableData }) => {
         setLoading(true);
         console.log("TableView: Starting data fetch...");
 
-        const API_BASE =
-          import.meta.env.VITE_API_BASE || "http://localhost:8000";
+        const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
         // First, trigger the data processing script
         const processResponse = await fetch(`${API_BASE}/process/transformers`);

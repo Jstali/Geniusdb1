@@ -4,7 +4,7 @@ import MapSection from "../components/MapSection";
 import SiteDetailsCard from "../components/SiteDetailsCard";
 import { getActiveData, extractMapMarkers } from "../lib/filterUtils";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
 const MapView = ({ activeView = null, selectedColumns = [] }) => {
   // Add activeView and selectedColumns props
@@ -74,7 +74,7 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
         
         if (activeView) {
           // Use saved view endpoint with selected columns and filters
-          endpoint = `${API_BASE}/api/views/${activeView}/map-data?user_id=1`;
+          endpoint = `${API_BASE}/data/views/${activeView}/map-data?user_id=1`;
           payload = {
             filters: backendFilters,
             selected_columns: selectedColumns.length > 0 ? selectedColumns : [
@@ -85,7 +85,7 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
           console.log("MapView: Using saved view endpoint with selectedColumns:", selectedColumns, "and filters:", backendFilters);
         } else {
           // Use home page endpoint with filters
-          endpoint = `${API_BASE}/api/map-data`;
+          endpoint = `${API_BASE}/data/map-data`;
           payload = {
             filters: backendFilters,
             selected_columns: [

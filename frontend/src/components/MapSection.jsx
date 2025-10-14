@@ -62,7 +62,7 @@ const MapSection = ({
   const abortControllerRef = useRef(null);
 
   // Get API base URL from environment or default to localhost:8000
-  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+  const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
   console.log("MapSection received props:", { 
     dataLength: data?.length || 0, 
@@ -168,7 +168,7 @@ const MapSection = ({
 
           // Make request to the new backend endpoint
           const response = await fetch(
-            `${API_BASE}/api/views/${activeView}/map-data?user_id=1`,
+            `${API_BASE}/data/views/${activeView}/map-data?user_id=1`,
             {
               method: "POST",
               headers: {

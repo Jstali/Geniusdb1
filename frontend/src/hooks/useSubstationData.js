@@ -17,7 +17,8 @@ export const useSubstationData = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/data/map");
+        const API_BASE = (window._env_ && window._env_.API_BASE) || "";
+        const response = await fetch(`${API_BASE}/data/map`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

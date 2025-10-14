@@ -1,0 +1,7 @@
+// Runtime environment configuration
+// This file is generated at container startup
+window._env_ = {
+  API_BASE: "${API_BASE}",
+  VITE_GOOGLE_MAPS_API_KEY: "${VITE_GOOGLE_MAPS_API_KEY}"
+};
+

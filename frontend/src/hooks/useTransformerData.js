@@ -10,8 +10,7 @@ export const useTransformerData = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const API_BASE =
-          import.meta.env.VITE_API_BASE || "http://localhost:8000";
+        const API_BASE = (window._env_ && window._env_.API_BASE) || "";
         const response = await fetch(`${API_BASE}/data/transformers`);
         if (!response.ok)
           throw new Error(

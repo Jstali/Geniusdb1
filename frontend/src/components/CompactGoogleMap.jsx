@@ -47,7 +47,7 @@ const CompactGoogleMap = ({
   const abortControllerRef = useRef(null);
 
   // Get API base URL from environment or default to localhost:8000
-  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+  const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
   console.log("CompactGoogleMap received props:", {
     isHomePage,
@@ -378,7 +378,7 @@ const CompactGoogleMap = ({
 
           // Make request to the new backend endpoint
           const response = await fetch(
-            `${API_BASE}/api/views/${activeView}/map-data?user_id=1`,
+            `${API_BASE}/data/views/${activeView}/map-data?user_id=1`,
             {
               method: "POST",
               headers: {
@@ -442,7 +442,7 @@ const CompactGoogleMap = ({
           setLastSuccessfulMarkers(transformedMarkers);
           setDataLoaded(true);
         } else if (isHomePage) {
-          // For home page, use the new /api/map-data endpoint
+          // For home page, use the new /data/map-data endpoint
           console.log(
             "CompactGoogleMap: Fetching filtered map data for home page",
             {
@@ -487,7 +487,7 @@ const CompactGoogleMap = ({
           };
 
           // Make request to the new home page backend endpoint
-          const response = await fetch(`${API_BASE}/api/map-data`, {
+          const response = await fetch(`${API_BASE}/data/map-data`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

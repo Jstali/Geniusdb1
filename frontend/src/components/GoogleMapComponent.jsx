@@ -51,13 +51,25 @@ const GoogleMapComponent = ({
   const [markersInitialized, setMarkersInitialized] = useState(false);
 
   // Get Google Maps API key from environment
-  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  const GOOGLE_MAPS_API_KEY = (window._env_ && window._env_.VITE_GOOGLE_MAPS_API_KEY) || "";
+  
+  // Debug logging
+  console.log("GoogleMapComponent: Google Maps API Key:", GOOGLE_MAPS_API_KEY ? "Present" : "Missing");
+  console.log("GoogleMapComponent: window._env_:", window._env_);
 
   // Load Google Maps API
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   });
+
+  // Handle Google Maps API loading errors
+  useEffect(() => {
+    if (loadError) {
+      console.error("Google Maps API loading error:", loadError);
+      setError(`Google Maps API loading failed: ${loadError.message}`);
+    }
+  }, [loadError]);
 
   // Function to determine marker color based on generation headroom
   const getMarkerColor = useCallback((headroom) => {

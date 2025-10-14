@@ -182,8 +182,11 @@ const CustomChartBuilder = ({
       setError("");
       console.log("CustomChartBuilder: Starting data fetch from database...");
 
+      // Get API base URL from environment
+      const API_BASE = (window._env_ && window._env_.API_BASE) || "";
+      
       // First, trigger the data processing script
-      const processResponse = await fetch("/process/transformers");
+      const processResponse = await fetch(`${API_BASE}/process/transformers`);
       if (!processResponse.ok) {
         throw new Error(
           `HTTP error while processing data! status: ${processResponse.status}`
@@ -196,7 +199,7 @@ const CustomChartBuilder = ({
       console.log("Data processing result:", processResult);
 
       // Then fetch the transformer data from the backend API
-      const response = await fetch("/data/transformers");
+      const response = await fetch(`${API_BASE}/data/transformers`);
       if (!response.ok) {
         throw new Error(
           `HTTP error while fetching data! status: ${response.status}`
@@ -248,7 +251,8 @@ const CustomChartBuilder = ({
         filters: filters
       };
 
-      const response = await fetch("/api/chart-data", {
+      const API_BASE = (window._env_ && window._env_.API_BASE) || "";
+      const response = await fetch(`${API_BASE}/data/chart-data`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

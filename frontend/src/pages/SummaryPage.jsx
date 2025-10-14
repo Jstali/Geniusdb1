@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
 const SummaryPage = () => {
   const [summaryData, setSummaryData] = useState(null);

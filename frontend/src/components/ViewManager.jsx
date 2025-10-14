@@ -47,7 +47,7 @@ const ViewManager = ({
   const fetchViews = async () => {
     try {
       setLoading(true);
-      const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+      const API_BASE = (window._env_ && window._env_.API_BASE) || "";
       const response = await axios.get(`${API_BASE}/api/user/views`);
       setViews(response.data.views || []);
       setLoading(false);
@@ -66,7 +66,7 @@ const ViewManager = ({
 
     try {
       setLoading(true);
-      const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+      const API_BASE = (window._env_ && window._env_.API_BASE) || "";
       const response = await axios.get(
         `${API_BASE}/api/user/views/${selectedSlot}`
       );
@@ -146,7 +146,7 @@ const ViewManager = ({
       setError("");
       setSuccess("");
 
-      const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+      const API_BASE = (window._env_ && window._env_.API_BASE) || "";
       // Prepare view data as query parameters
       const params = new URLSearchParams({
         name: viewName,

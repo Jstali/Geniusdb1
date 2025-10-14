@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import CustomChartBuilder from "../components/CustomChartBuilder";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
 const Charts = () => {
   const [data, setData] = useState([]);

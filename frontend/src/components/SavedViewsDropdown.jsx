@@ -8,7 +8,7 @@ const SavedViewsDropdown = ({ onLoadView }) => {
   const dropdownRef = useRef(null);
 
   // Get API base URL from environment or default to localhost:8000
-  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+  const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
   // Fetch saved views
   const fetchViews = async () => {

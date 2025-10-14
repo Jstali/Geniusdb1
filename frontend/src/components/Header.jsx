@@ -26,7 +26,7 @@ const Header = ({
           {/* Left: Title */}
           <div className="flex items-center ">
             <img 
-              src="/genius.jpeg" 
+              src="/geniusdb logo.png" 
               alt="GeniusDB - Intelligent Grid Data" 
               className="w-20 h-16 mr-4 object-contain"
             />

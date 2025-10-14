@@ -86,9 +86,9 @@ const DataTable = ({
 
 
   // Set equal initial column sizes (Excel-like)
-  const DEFAULT_COLUMN_WIDTH = 150;
-  const MIN_COLUMN_WIDTH = 50;
-  const MAX_COLUMN_WIDTH = 800;
+  const DEFAULT_COLUMN_WIDTH = 250;
+  const MIN_COLUMN_WIDTH = 120;
+  const MAX_COLUMN_WIDTH = 1000;
 
   // Initialize all columns with equal width
   useEffect(() => {

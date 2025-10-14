@@ -69,7 +69,7 @@ const DraggableHeaderCell = ({
     >
       <div className="flex items-center justify-between h-full">
         <div
-          className="flex items-center cursor-pointer hover:text-blue-200 px-4 py-3 flex-1"
+          className="flex items-center cursor-pointer hover:text-blue-200 px-4 py-4 flex-1 min-h-[60px]"
           onClick={onSort}
         >
           {/* Drag handle */}
@@ -83,7 +83,7 @@ const DraggableHeaderCell = ({
             ⋮⋮
           </div>
           
-          <span className="mr-2 truncate">
+          <span className="mr-2 break-words leading-tight">
             {header.column.columnDef.header}
           </span>
           
@@ -113,7 +113,7 @@ const DraggableHeaderCell = ({
             
             const handleMouseMove = (e) => {
               const newWidth = startWidth + (e.clientX - startX);
-              const constrainedWidth = Math.max(50, Math.min(800, newWidth));
+              const constrainedWidth = Math.max(120, Math.min(1000, newWidth));
               console.log('New width:', constrainedWidth);
               
               // Use the table's column sizing state setter

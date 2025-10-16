@@ -63,7 +63,7 @@ const SummaryPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
+      <div className="min-h-screen flex justify-center items-center" style={{backgroundColor: '#F6F2F4'}}>
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
       </div>
     );
@@ -71,7 +71,7 @@ const SummaryPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 flex justify-center items-center p-8">
+      <div className="min-h-screen flex justify-center items-center p-8" style={{backgroundColor: '#F6F2F4'}}>
         <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-md">
           <strong className="font-bold">Error! </strong>
           <span className="block sm:inline">{error}</span>
@@ -82,7 +82,7 @@ const SummaryPage = () => {
 
   if (!summaryData) {
     return (
-      <div className="min-h-screen bg-gray-100 flex justify-center items-center p-8">
+      <div className="min-h-screen flex justify-center items-center p-8" style={{backgroundColor: '#F6F2F4'}}>
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-6 py-4 rounded-lg max-w-md">
           <strong className="font-bold">No data! </strong>
           <span className="block sm:inline">No summary data available.</span>
@@ -92,7 +92,7 @@ const SummaryPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10">
+    <div className="min-h-screen py-10" style={{backgroundColor: '#F6F2F4'}}>
       {/* Page Title */}
       <h1 className="text-center text-2xl font-bold text-indigo-600 py-8">
         Summary Overview

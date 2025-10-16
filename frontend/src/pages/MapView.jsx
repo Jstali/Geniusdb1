@@ -223,7 +223,7 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{backgroundColor: '#F6F2F4'}}>
       <div className="max-w-7xl mx-auto p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Map View</h1>
 

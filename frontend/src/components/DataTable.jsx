@@ -288,11 +288,20 @@ const DataTable = ({
   });
   console.log("DataTable: Sample data record:", data[0]);
   console.log("DataTable: Sample columns:", columns.slice(0, 5));
+  console.log("DataTable: Column accessorKeys:", columns.map(col => col.accessorKey));
+  console.log("DataTable: First row data values:", data[0] ? Object.values(data[0]).slice(0, 10) : 'No data');
+  console.log("DataTable: First row column names:", data[0] ? Object.keys(data[0]) : 'No data');
+  console.log("DataTable: Sample data for search test:", data.slice(0, 3).map(row => ({
+    rowIndex: data.indexOf(row),
+    columns: Object.keys(row),
+    values: Object.values(row).slice(0, 5)
+  })));
 
   // Create columns with custom cell rendering
   const processedColumns = columns.map((col) => ({
     ...col,
     filterFn: col.accessorKey ? "multiSelect" : undefined,
+    enableGlobalFilter: true, // Enable global filtering for each column
     size: DEFAULT_COLUMN_WIDTH, // Set default size for TanStack table
     enableResizing: true, // Enable column resizing
     minSize: MIN_COLUMN_WIDTH, // Set minimum column width
@@ -324,6 +333,54 @@ const DataTable = ({
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    enableGlobalFilter: true, // Explicitly enable global filtering
+    globalFilterFn: (row, columnId, value) => {
+      // Custom global filter function to search ONLY column data values
+      if (!value || value.trim() === '') return true;
+      
+      const searchValue = value.toLowerCase().trim();
+      
+      // Get the original row data - this contains only the actual column data
+      const rowData = row.original;
+      
+      // Search through each column's data value only
+      const matches = Object.entries(rowData).some(([columnName, cellValue]) => {
+        // Skip null, undefined, and empty values
+        if (cellValue === null || cellValue === undefined || cellValue === '') return false;
+        
+        // Convert cell value to string and search in the actual data
+        const cellString = String(cellValue).toLowerCase();
+        const found = cellString.includes(searchValue);
+        
+        // Debug logging for matches - show actual data values
+        if (found && row.index < 3) {
+          console.log('Found match in column data:', {
+            columnName,
+            actualDataValue: cellValue,
+            searchValue,
+            rowIndex: row.index
+          });
+        }
+        
+        return found;
+      });
+      
+      // Debug logging for first few rows - show actual data structure
+      if (row.index < 2) {
+        console.log('Searching column data:', {
+          searchValue,
+          rowIndex: row.index,
+          actualColumnData: Object.fromEntries(
+            Object.entries(rowData).filter(([key, value]) => 
+              value !== null && value !== undefined && value !== ''
+            )
+          ),
+          matches
+        });
+      }
+      
+      return matches;
+    },
     filterFns: {
       multiSelect: (row, columnId, filterValues) => {
         if (!filterValues || filterValues.length === 0) return true;
@@ -352,6 +409,8 @@ const DataTable = ({
       console.log("DataTable: Notifying parent of filtered data change", {
         originalDataLength: data.length,
         filteredDataLength: filteredData.length,
+        globalFilter: globalFilter,
+        columnFilters: columnFilters,
         sampleFilteredData: filteredData.slice(0, 3)
       });
       onFilteredDataChange(filteredData);
@@ -371,12 +430,13 @@ const DataTable = ({
       console.log("DataTable: Applying initial filters", initialFilters);
       
       const newColumnFilters = [];
-      let newGlobalFilter = "";
+      // Don't apply global filter from initialFilters - let user control global search
+      // let newGlobalFilter = "";
       
       Object.entries(initialFilters).forEach(([columnId, filterValues]) => {
         if (columnId === "_global") {
-          newGlobalFilter = filterValues;
-          console.log("DataTable: Setting global filter:", newGlobalFilter);
+          // Skip global filter from initialFilters - we want user to control this
+          console.log("DataTable: Skipping global filter from initialFilters to allow user control");
         } else if (filterValues && filterValues.length > 0) {
           newColumnFilters.push({
             id: columnId,
@@ -387,10 +447,11 @@ const DataTable = ({
       });
       
       console.log("DataTable: Final column filters:", newColumnFilters);
-      console.log("DataTable: Final global filter:", newGlobalFilter);
+      console.log("DataTable: Skipping global filter to allow user search control");
       
       setColumnFilters(newColumnFilters);
-      setGlobalFilter(newGlobalFilter);
+      // Don't set global filter from initialFilters
+      // setGlobalFilter(newGlobalFilter);
       
       // Update multi-select values for UI consistency
       const newMultiSelectValues = {};
@@ -432,6 +493,30 @@ const DataTable = ({
     }
   }, [initialPaginationConfig]);
 
+  // Monitor global filter changes
+  useEffect(() => {
+    console.log("DataTable: Global filter changed:", globalFilter);
+  }, [globalFilter]);
+
+  // Monitor table filtered rows
+  useEffect(() => {
+    if (table) {
+      const filteredRows = table.getFilteredRowModel().rows;
+      console.log("DataTable: Table filtered rows changed:", {
+        totalRows: data.length,
+        filteredRows: filteredRows.length,
+        globalFilter: globalFilter,
+        columnFilters: columnFilters.length
+      });
+    }
+  }, [table, globalFilter, columnFilters, data.length]);
+
+  // Track user-applied filters (excluding initial filters from saved views)
+  const [userAppliedFilters, setUserAppliedFilters] = useState({
+    columnFilters: [],
+    globalFilter: ""
+  });
+
   // Notify parent component when filters change
   useEffect(() => {
     if (onFiltersChange) {
@@ -455,6 +540,25 @@ const DataTable = ({
       onFiltersChange(filters);
     }
   }, [columnFilters, globalFilter, onFiltersChange]);
+
+  // Track when user applies filters (not from initial filters)
+  useEffect(() => {
+    // Only update userAppliedFilters if we're not in the initial filter application phase
+    if (initialFiltersApplied.current) {
+      setUserAppliedFilters({
+        columnFilters: columnFilters,
+        globalFilter: globalFilter
+      });
+    }
+  }, [columnFilters, globalFilter]);
+
+  // Check if user has applied any filters (excluding global search)
+  const hasUserAppliedFilters = useMemo(() => {
+    const hasColumnFilters = userAppliedFilters.columnFilters.length > 0;
+    // Don't count global search as a filter - it's just a search
+    // const hasGlobalFilter = userAppliedFilters.globalFilter && userAppliedFilters.globalFilter.trim() !== '';
+    return hasColumnFilters; // Only count column filters, not global search
+  }, [userAppliedFilters]);
 
   // Get unique values for each column
   const getColumnFilterOptions = useMemo(() => {
@@ -603,12 +707,34 @@ const DataTable = ({
     });
   };
 
-  // Clear all filters
+  // Clear all user-applied filters (but keep initial filters from saved views)
   const clearAllFilters = () => {
-    setColumnFilters([]);
+    // Only clear user-applied filters, not initial filters from saved views
+    const initialColumnFilters = [];
+    const initialGlobalFilter = "";
+    
+    // Apply initial filters if they exist
+    if (initialFilters && Object.keys(initialFilters).length > 0) {
+      Object.entries(initialFilters).forEach(([columnId, filterValues]) => {
+        if (columnId !== "_global" && filterValues && filterValues.length > 0) {
+          initialColumnFilters.push({
+            id: columnId,
+            value: filterValues
+          });
+        }
+      });
+    }
+    
+    setColumnFilters(initialColumnFilters);
     setColumnMultiSelectValues({});
-    setGlobalFilter("");
+    setGlobalFilter(initialGlobalFilter);
     setOpenDropdowns({});
+    
+    // Reset user applied filters tracking
+    setUserAppliedFilters({
+      columnFilters: initialColumnFilters,
+      globalFilter: initialGlobalFilter
+    });
   };
 
   // Clear specific column filter
@@ -760,19 +886,47 @@ const DataTable = ({
     <div className="w-full">
       {/* Toolbar */}
       <div className="mb-4 flex flex-wrap gap-4 items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
-        {/* Left side - Search and Table Toggle */}
+        {/* Left side - Search Input */}
         <div className="flex items-center gap-4">
           <div className="flex-1 min-w-64">
             <div className="relative text-blue-950">
-              <input
-                type="text"
-                value={globalFilter ?? ""}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                placeholder="Search all columns..."
-                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent "
-              />
+                      <input
+                        type="text"
+                        value={globalFilter ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          console.log('Column search input changed:', value);
+                          setGlobalFilter(value);
+                        }}
+                        placeholder="Search data columns..."
+                        className={`w-full pl-10 pr-4 py-2 text-sm border rounded-md focus:outline-none transition-all duration-300 ${
+                          globalFilter && globalFilter.trim() !== '' 
+                            ? 'border-red-600 bg-red-50' 
+                            : 'border-gray-300'
+                        }`}
+                        style={{
+                          backgroundColor: globalFilter && globalFilter.trim() !== '' ? '#FEF2F2' : 'white'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#8DE971';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(141, 233, 113, 0.2)';
+                        }}
+                        onBlur={(e) => {
+                          if (globalFilter && globalFilter.trim() !== '') {
+                            e.target.style.borderColor = '#AD96DC';
+                            e.target.style.boxShadow = 'none';
+                          } else {
+                            e.target.style.borderColor = '#E8E4E6';
+                            e.target.style.boxShadow = 'none';
+                          }
+                        }}
+                      />
               <svg
-                className="absolute left-3 top-2.5 h-4 w-4 text-gray-400"
+                className={`absolute left-3 top-2.5 h-4 w-4 ${
+                  globalFilter && globalFilter.trim() !== '' 
+                    ? 'text-red-600' 
+                    : 'text-gray-400'
+                }`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -784,10 +938,23 @@ const DataTable = ({
                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
               </svg>
+              {globalFilter && globalFilter.trim() !== '' && (
+                <button
+                  onClick={() => setGlobalFilter('')}
+                  className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                >
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
+            {globalFilter && globalFilter.trim() !== '' && (
+              <div className="mt-1 text-xs" style={{color: '#8DE971'}}>
+                {table.getFilteredRowModel().rows.length} of {data.length} results match "{globalFilter}"
+              </div>
+            )}
           </div>
-
-          {/* Table View Toggle - REMOVED as per requirements */}
         </div>
 
         {/* Right side - Action buttons */}
@@ -800,7 +967,19 @@ const DataTable = ({
                 showColumnToggleRef.current = newState;
                 setShowColumnToggle(newState);
               }}
-              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 text-sm font-medium rounded-md transition-all duration-300 transform hover:scale-105 focus:outline-none"
+              style={{
+                backgroundColor: '#AD96DC',
+                color: 'white',
+                border: '1px solid rgba(3, 3, 4, 0.1)',
+                boxShadow: '0 4px 12px rgba(173, 150, 220, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.boxShadow = '0 6px 20px rgba(173, 150, 220, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.boxShadow = '0 4px 12px rgba(173, 150, 220, 0.3)';
+              }}
             >
               Columns
             </button>
@@ -901,11 +1080,19 @@ const DataTable = ({
           {/* Pivot Table Toggle */}
           <button
             onClick={toggleViewMode}
-            className={`px-3 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 ${
-              isPivotMode
-                ? "text-white bg-blue-600 border border-blue-600 focus:ring-blue-500"
-                : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:ring-gray-500"
-            }`}
+            className="px-3 py-2 text-sm font-medium rounded-md transition-all duration-300 transform hover:scale-105 focus:outline-none"
+            style={{
+              backgroundColor: isPivotMode ? '#8DE971' : 'transparent',
+              color: isPivotMode ? 'white' : '#AD96DC',
+              border: `2px solid #AD96DC`,
+              boxShadow: '0 4px 12px rgba(173, 150, 220, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.boxShadow = '0 6px 20px rgba(173, 150, 220, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.boxShadow = '0 4px 12px rgba(173, 150, 220, 0.2)';
+            }}
           >
             {isPivotMode ? "Switch to Regular Table" : "Switch to Pivot Table"}
           </button>
@@ -913,7 +1100,17 @@ const DataTable = ({
           {/* Export CSV Button */}
           <button
             onClick={exportToCSV}
-            className="px-3 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="px-3 py-2 text-sm font-medium text-white rounded-md transition-all duration-300 transform hover:scale-105 focus:outline-none"
+            style={{
+              backgroundColor: '#8DE971',
+              boxShadow: '0 4px 12px rgba(141, 233, 113, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.boxShadow = '0 6px 20px rgba(141, 233, 113, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.boxShadow = '0 4px 12px rgba(141, 233, 113, 0.3)';
+            }}
           >
             <svg
               className="w-4 h-4 mr-2 inline-block"
@@ -931,41 +1128,16 @@ const DataTable = ({
             Export CSV
           </button>
 
-          {/* Clear Filters Button */}
-          {(columnFilters.length > 0 || globalFilter) && (
-            <button
-              onClick={clearAllFilters}
-              className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              Clear Filters
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Active Filters */}
-      {(columnFilters.length > 0 || globalFilter) && (
+      {/* Active Filters - Only show column filters, not global search */}
+      {columnFilters.length > 0 && (
         <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-blue-800">
               Active Filters:
             </span>
-            {globalFilter && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                Global: {globalFilter}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log("DataTable: Global filter remove button clicked");
-                    setGlobalFilter("");
-                  }}
-                  className="ml-1 text-purple-600 hover:text-purple-800 cursor-pointer"
-                >
-                  ×
-                </button>
-              </span>
-            )}
             {columnFilters.map((filter) => {
               const column = columns.find(
                 (col) => col.accessorKey === filter.id
@@ -1014,7 +1186,7 @@ const DataTable = ({
       )}
 
       {/* Table or Pivot Table View */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden table-container">
+      <div className="bg-white rounded-lg overflow-hidden table-container transition-all duration-300 hover:shadow-xl" style={{boxShadow: '0 4px 12px rgba(3, 3, 4, 0.08)', borderRadius: '12px', border: '1px solid rgba(3, 3, 4, 0.1)'}}>
         {isPivotMode && pivotConfig ? (
           // Pivot Table View
           <div className="p-4">
@@ -1066,7 +1238,7 @@ const DataTable = ({
                   handleMultiSelectChange={handleMultiSelectChange}
                   dropdownRefs={dropdownRefs}
                 />
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200">
                   {/* Actual Data Rows */}
                   {table.getPaginationRowModel().rows.map((row, idx) => {
                     const rowId = row.original.id || row.id;
@@ -1076,9 +1248,22 @@ const DataTable = ({
                       <tr
                         key={row.id}
                         id={`row-${rowId}`}
-                        className={`cursor-pointer ${
-                          idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                        } hover:bg-blue-50 ${isSelected ? "bg-yellow-100" : ""}`}
+                        className={`cursor-pointer transition-all duration-200 hover:shadow-md ${isSelected ? "bg-yellow-100" : ""}`}
+                        style={{
+                          backgroundColor: idx % 2 === 0 ? 'white' : '#F6F2F4'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.target.style.backgroundColor = 'rgba(173, 150, 220, 0.1)';
+                            e.target.style.transform = 'translateX(2px)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.target.style.backgroundColor = idx % 2 === 0 ? 'white' : '#F6F2F4';
+                            e.target.style.transform = 'translateX(0)';
+                          }
+                        }}
                         onClick={() => handleRowClick(row)}
                       >
                         {columnOrder.map((columnId) => {
@@ -1166,18 +1351,18 @@ const DataTable = ({
 
       {/* Pagination Controls - Now OUTSIDE and BELOW the table */}
       {!isPivotMode && (
-        <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 sm:px-6">
+        <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 sm:px-6" style={{boxShadow: '0 2px 4px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)', borderRadius: '8px', border: '1px solid rgba(230, 57, 70, 0.1)'}}>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm" style={{color: '#030304'}}>
                 Showing{" "}
-                <span className="font-medium">
+                <span className="font-medium" style={{color: '#030304'}}>
                   {table.getState().pagination.pageIndex *
                     table.getState().pagination.pageSize +
                     1}
                 </span>{" "}
                 to{" "}
-                <span className="font-medium">
+                <span className="font-medium" style={{color: '#030304'}}>
                   {Math.min(
                     (table.getState().pagination.pageIndex + 1) *
                       table.getState().pagination.pageSize,
@@ -1185,7 +1370,7 @@ const DataTable = ({
                   )}
                 </span>{" "}
                 of{" "}
-                <span className="font-medium">
+                <span className="font-medium" style={{color: '#030304'}}>
                   {table.getFilteredRowModel().rows.length}
                 </span>{" "}
                 results
@@ -1195,7 +1380,20 @@ const DataTable = ({
               <select
                 value={table.getState().pagination.pageSize}
                 onChange={(e) => table.setPageSize(Number(e.target.value))}
-                className="rounded border-gray-300 text-sm focus:border-blue-300 focus:ring focus:ring-blue-200"
+                className="rounded border-gray-300 text-sm transition-all duration-300"
+                style={{
+                  backgroundColor: '#F6F2F4',
+                  borderColor: '#AD96DC',
+                  color: '#030304'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#8DE971';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(141, 233, 113, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#AD96DC';
+                  e.target.style.boxShadow = 'none';
+                }}
               >
                 {[5, 10, 20, 30, 40, 50].map((pageSize) => (
                   <option key={pageSize} value={pageSize}>
@@ -1207,32 +1405,100 @@ const DataTable = ({
                 <button
                   onClick={() => table.setPageIndex(0)}
                   disabled={!table.getCanPreviousPage()}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: '#F6F2F4',
+                    borderColor: '#AD96DC',
+                    color: '#030304'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.backgroundColor = '#AD96DC';
+                      e.target.style.color = 'white';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.backgroundColor = '#F6F2F4';
+                      e.target.style.color = '#030304';
+                    }
+                  }}
                 >
                   ««
                 </button>
                 <button
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
-                  className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-3 py-2 border text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: '#F6F2F4',
+                    borderColor: '#AD96DC',
+                    color: '#030304'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.backgroundColor = '#AD96DC';
+                      e.target.style.color = 'white';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.backgroundColor = '#F6F2F4';
+                      e.target.style.color = '#030304';
+                    }
+                  }}
                 >
                   ‹
                 </button>
-                <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                <span className="relative inline-flex items-center px-4 py-2 border text-sm font-medium" style={{backgroundColor: '#8DE971', borderColor: '#8DE971', color: 'white'}}>
                   Page {table.getState().pagination.pageIndex + 1} of{" "}
                   {table.getPageCount()}
                 </span>
                 <button
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
-                  className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-3 py-2 border text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: '#F6F2F4',
+                    borderColor: '#AD96DC',
+                    color: '#030304'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.backgroundColor = '#AD96DC';
+                      e.target.style.color = 'white';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.backgroundColor = '#F6F2F4';
+                      e.target.style.color = '#030304';
+                    }
+                  }}
                 >
                   ›
                 </button>
                 <button
                   onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                   disabled={!table.getCanNextPage()}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: '#F6F2F4',
+                    borderColor: '#AD96DC',
+                    color: '#030304'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.backgroundColor = '#AD96DC';
+                      e.target.style.color = 'white';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.backgroundColor = '#F6F2F4';
+                      e.target.style.color = '#030304';
+                    }
+                  }}
                 >
                   »»
                 </button>

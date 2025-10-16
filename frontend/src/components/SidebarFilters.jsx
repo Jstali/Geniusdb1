@@ -37,9 +37,9 @@ const SidebarFilters = ({
   };
 
   return (
-    <div className="map-container bg-white p-6 h-full overflow-y-auto">
+            <div className="map-container p-6 h-full overflow-y-auto transition-all duration-300 hover:shadow-xl" style={{backgroundColor: 'white', boxShadow: '0 4px 12px rgba(3, 3, 4, 0.08)', borderRadius: '12px', border: '1px solid rgba(3, 3, 4, 0.1)'}}>
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+        <h3 className="text-lg font-semibold" style={{color: '#030304', fontWeight: 'bold'}}>Filters</h3>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="text-gray-500 hover:text-gray-700 transition-colors duration-200 md:hidden"
@@ -52,13 +52,27 @@ const SidebarFilters = ({
         <div className="space-y-6">
           {/* Search by Site Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search by Site Name
-            </label>
+                    <label className="block text-sm font-medium mb-2" style={{color: '#030304'}}>
+                      Search by Site Name
+                    </label>
             <input
               type="text"
               placeholder="Enter site name..."
-              className="w-full px-3 py-2 border text-gray-600 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-all duration-300 hover:shadow-md"
+              style={{
+                backgroundColor: 'white',
+                color: '#030304',
+                border: '1px solid #E8E4E6',
+                boxShadow: '0 1px 3px rgba(3, 3, 4, 0.1)'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#8DE971';
+                e.target.style.boxShadow = '0 0 0 3px rgba(141, 233, 113, 0.2)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#E8E4E6';
+                e.target.style.boxShadow = '0 1px 3px rgba(3, 3, 4, 0.1)';
+              }}
               onChange={handleSiteNameChange}
               value={currentFilters.siteName || ""}
             />
@@ -66,11 +80,25 @@ const SidebarFilters = ({
 
           {/* Voltage Level Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Voltage Level
-            </label>
+                    <label className="block text-sm font-medium mb-2" style={{color: '#030304'}}>
+                      Voltage Level
+                    </label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-all duration-300 hover:shadow-md"
+              style={{
+                backgroundColor: 'white',
+                color: '#030304',
+                border: '1px solid #E8E4E6',
+                boxShadow: '0 1px 3px rgba(3, 3, 4, 0.1)'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#8DE971';
+                e.target.style.boxShadow = '0 0 0 3px rgba(141, 233, 113, 0.2)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#E8E4E6';
+                e.target.style.boxShadow = '0 1px 3px rgba(3, 3, 4, 0.1)';
+              }}
               value={currentFilters.voltage || ""}
               onChange={handleVoltageChange}
             >
@@ -85,28 +113,56 @@ const SidebarFilters = ({
 
           {/* Available Power Range Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Available Power (MW)
-            </label>
+                    <label className="block text-sm font-medium mb-2" style={{color: '#030304'}}>
+                      Available Power (MW)
+                    </label>
             <input
               type="number"
               min="0"
               step="1"
               placeholder="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-all duration-300 hover:shadow-md"
+              style={{
+                backgroundColor: 'white',
+                color: '#030304',
+                border: '1px solid #E8E4E6',
+                boxShadow: '0 1px 3px rgba(3, 3, 4, 0.1)'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#8DE971';
+                e.target.style.boxShadow = '0 0 0 3px rgba(141, 233, 113, 0.2)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#E8E4E6';
+                e.target.style.boxShadow = '0 1px 3px rgba(3, 3, 4, 0.1)';
+              }}
               value={currentFilters.powerRange?.min ?? 0}
               onChange={(e) => handlePowerRangeChange(e.target.value)}
             />
-            <p className="text-xs text-gray-500 mt-1">Show sites with power ≥ this value</p>
+            <p className="text-xs mt-1" style={{color: 'rgba(3, 3, 4, 0.5)'}}>Show sites with power ≥ this value</p>
           </div>
 
           {/* Network Operators Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Network Operator
-            </label>
+                    <label className="block text-sm font-medium mb-2" style={{color: '#030304'}}>
+                      Network Operator
+                    </label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-all duration-300 hover:shadow-md"
+              style={{
+                backgroundColor: 'white',
+                color: '#030304',
+                border: '1px solid #E8E4E6',
+                boxShadow: '0 1px 3px rgba(3, 3, 4, 0.1)'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#8DE971';
+                e.target.style.boxShadow = '0 0 0 3px rgba(141, 233, 113, 0.2)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#E8E4E6';
+                e.target.style.boxShadow = '0 1px 3px rgba(3, 3, 4, 0.1)';
+              }}
               value={currentFilters.operators || ""}
               onChange={handleOperatorChange}
             >

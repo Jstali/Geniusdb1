@@ -3,7 +3,7 @@ import ExcelLikeTable from '../components/ExcelLikeTable';
 
 const ExcelTableDemo = () => {
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
+    <div className="min-h-screen py-8 px-4" style={{backgroundColor: '#F6F2F4'}}>
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

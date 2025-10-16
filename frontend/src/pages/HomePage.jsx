@@ -258,7 +258,7 @@ const HomePage = ({
       {/* Top section with map and panels */}
       <div className="flex gap-4 h-[600px] mb-6 transition-all duration-300 flex-layout">
         {/* Left panel - Filters */}
-        <div className="w-80 shrink-0 transition-all duration-300 hover:shadow-xl">
+        <div className="w-80 shrink-0 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1" style={{boxShadow: '0 4px 12px rgba(3, 3, 4, 0.08)', border: '1px solid rgba(3, 3, 4, 0.1)', borderRadius: '12px'}}>
           <SidebarFilters
             onSiteNameSearch={(name) => {
               console.log("HomePage: Site name filter changed to:", name);
@@ -283,7 +283,7 @@ const HomePage = ({
         </div>
 
         {/* Center - Map with extra width */}
-        <div className="flex-grow transition-all duration-300">
+        <div className="flex-grow transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1" style={{boxShadow: '0 6px 16px rgba(3, 3, 4, 0.12)', borderRadius: '12px', border: '1px solid rgba(3, 3, 4, 0.1)'}}>
           <div className="h-full rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl relative">
             {console.log("🗺️ HomePage: Passing data to CompactGoogleMapSimple:", {
               filteredTableDataIsNull: filteredTableData === null,
@@ -310,7 +310,7 @@ const HomePage = ({
         </div>
 
         {/* Right panel - Site Details */}
-        <div className="w-80 shrink-0 transition-all text-gray-700 duration-300 hover:shadow-xl">
+        <div className="w-80 shrink-0 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1" style={{boxShadow: '0 4px 12px rgba(3, 3, 4, 0.08)', border: '1px solid rgba(3, 3, 4, 0.1)', borderRadius: '12px'}}>
           <SiteDetailsPanel
             selectedSite={selectedSite}
             summaryStats={summaryStats}
@@ -320,7 +320,7 @@ const HomePage = ({
       </div>
 
       {/* Bottom section - Table (removed chart section) */}
-      <div className="flex-grow bg-white rounded-lg shadow-lg p-4 transition-all duration-300 hover:shadow-xl table-container">
+      <div className="flex-grow bg-white rounded-lg shadow-lg p-4 transition-all duration-300 hover:shadow-xl table-container transform hover:-translate-y-1" style={{boxShadow: '0 4px 12px rgba(3, 3, 4, 0.08)', borderRadius: '12px', border: '1px solid rgba(3, 3, 4, 0.1)'}}>
         {loading ? (
           <div className="w-full h-64 flex items-center justify-center">
             <div className="text-gray-600">Loading data...</div>
@@ -332,7 +332,7 @@ const HomePage = ({
         ) : (
         <DataTable
           key={`table-${activeView || 'default'}`} // Only re-render when activeView changes, not when columns change
-          data={activeView ? activeData : data} // Use activeData only when there's an active view, otherwise use raw data
+          data={data} // Always use original data for global search to work properly
           columns={columns}
           selectedColumns={tableViewConfig?.selectedColumns || []} // Pass empty array when no columns selected
           onSelectedColumnsChange={handleSelectedColumnsChange}

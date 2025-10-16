@@ -83,7 +83,12 @@ const DraggableHeaderCell = ({
             ⋮⋮
           </div>
           
-          <span className="mr-2 break-words leading-tight">
+          <span 
+            className="mr-2 break-words leading-tight transition-colors duration-200"
+            style={{color: 'white'}}
+            onMouseEnter={(e) => e.target.style.color = '#030304'}
+            onMouseLeave={(e) => e.target.style.color = 'white'}
+          >
             {header.column.columnDef.header}
           </span>
           
@@ -144,7 +149,7 @@ const DraggableHeaderCell = ({
         {hasFilter && (
           <button
             onClick={onFilter}
-            className="ml-2 p-1 text-blue-200 hover:text-white hover:bg-blue-500 rounded"
+                      className="ml-2 p-1 text-white hover:text-white hover:bg-red-500 rounded transition-all duration-200"
             title="Filter column"
           >
             🔍
@@ -161,10 +166,10 @@ const DraggableHeaderCell = ({
           >
             <button
               onClick={() => toggleDropdown(columnId)}
-              className={`p-1 rounded hover:bg-blue-500 ${
+              className={`p-1 rounded hover:bg-red-500 transition-all duration-200 ${
                 hasFilter
-                  ? "text-blue-200 bg-blue-700"
-                  : "text-blue-300"
+                  ? "text-white bg-red-600"
+                  : "text-white"
               }`}
             >
               <svg
@@ -301,7 +306,7 @@ const DraggableTableHeader = ({
         items={columnOrder} 
         strategy={horizontalListSortingStrategy}
       >
-        <thead className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-md sticky top-0 z-10">
+        <thead className="shadow-md sticky top-0 z-10" style={{background: 'linear-gradient(135deg, #8DE971 0%, #7AC75E 100%)', boxShadow: '0 2px 6px rgba(141, 233, 113, 0.3)'}}>
           <tr>
             {orderedHeaders.map((header) => {
               const columnId = header.column.columnDef.accessorKey;

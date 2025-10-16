@@ -2,18 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Header from "../components/Header";
-import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 import HomePage from "./HomePage";
 import MapView from "./MapView";
 import TableView from "../components/TableView";
-import CustomChartBuilder from "../components/CustomChartBuilder";
+import ChartGeneratorDemo from "./ChartGeneratorDemo";
 import SummaryPage from "./SummaryPage";
+import ViewManagementModal from "../components/ViewManagementModal";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Home");
   const [allColumns, setAllColumns] = useState([]);
+  const [isViewManagerOpen, setIsViewManagerOpen] = useState(false);
 
   // View management state
   const [tableViewConfig, setTableViewConfig] = useState({
@@ -26,6 +27,9 @@ const Dashboard = () => {
     xAxis: "",
     yAxis: "",
   });
+
+  // Chart state for persistence across page navigation
+  const [generatedChart, setGeneratedChart] = useState(null);
 
   // Fetch all columns for ViewManager
   useEffect(() => {
@@ -54,6 +58,14 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     navigate("/login");
+  };
+
+  const handleNavigate = (tab) => {
+    if (tab === "View Management") {
+      setIsViewManagerOpen(true);
+    } else {
+      setActiveTab(tab);
+    }
   };
 
   const handleViewLoad = (viewConfig) => {
@@ -124,22 +136,14 @@ const Dashboard = () => {
         />; // Pass active view and selected columns to MapView
       case "Table View":
         return <TableView />;
-      case "Charts":
+      case "Chart Generator":
         return (
           <div className="p-6">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Charts</h1>
-              <p className="text-gray-600">
-                Build custom charts from your data. Select a chart type and
-                configure the axes.
-              </p>
-            </div>
-            <CustomChartBuilder
+            <ChartGeneratorDemo 
               selectedColumns={tableViewConfig?.selectedColumns || []}
               filters={tableViewConfig?.filters || {}}
-              chartType={chartViewConfig?.type || "bar"}
-              xAxis={chartViewConfig?.xAxis || ""}
-              yAxis={chartViewConfig?.yAxis || ""}
+              generatedChart={generatedChart}
+              setGeneratedChart={setGeneratedChart}
             />
           </div>
         );
@@ -180,24 +184,15 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{backgroundColor: '#F6F2F4'}}>
       <Header
+        active={activeTab}
+        onNavigate={handleNavigate}
         onLogout={handleLogout}
-        onViewLoad={handleViewLoad} // Pass the view load handler to Header
+        onViewLoad={handleViewLoad}
         className={
           activeTab === "Home" ? "fixed top-0 left-0 right-0 z-20" : ""
         }
-      />
-      <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        className={
-          activeTab === "Home" ? "fixed top-20 left-0 right-0 z-10" : ""
-        }
-        onViewLoad={handleViewLoad}
-        currentTableView={tableViewConfig}
-        currentChartView={chartViewConfig}
-        allColumns={allColumns}
       />
       <motion.main
         className={`flex-grow p-6 ${
@@ -206,7 +201,7 @@ const Dashboard = () => {
           activeTab === "Charts"
             ? "pb-16"
             : ""
-        } ${activeTab === "Home" ? "pt-36" : "mt-4"}`}
+        } ${activeTab === "Home" ? "pt-24" : "mt-4"}`}
         key={activeTab}
         variants={pageVariants}
         initial="initial"
@@ -225,6 +220,20 @@ const Dashboard = () => {
             ? "fixed bottom-0 left-0 right-0 z-10"
             : ""
         }
+      />
+      
+      {/* View Management Modal */}
+      <ViewManagementModal
+        isOpen={isViewManagerOpen}
+        onClose={() => setIsViewManagerOpen(false)}
+        onLoadView={(viewConfig) => {
+          if (handleViewLoad) {
+            handleViewLoad(viewConfig);
+          }
+          setIsViewManagerOpen(false);
+        }}
+        currentTableView={tableViewConfig}
+        allColumns={allColumns}
       />
     </div>
   );

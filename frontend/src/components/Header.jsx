@@ -1,80 +1,141 @@
 import React from "react";
 import SavedViewsDropdown from "./SavedViewsDropdown";
-
-const DEFAULT_MENU = [
-  "Home",
-  "Summary",
-  "Charts",
-  "Map View",
-  "Table View",
-  "Admin Panel",
-];
+import { Bold } from "lucide-react";
 
 const Header = ({
   active = "Home",
   onNavigate = () => {},
   onLogout = null,
-  menu = DEFAULT_MENU,
   children = null,
   className = "",
   onViewLoad = null,
 }) => {
+  const navigationItems = ["Home", "Summary", "Chart Generator", "Admin Panel"];
+
   return (
-    <header className={`w-full px-6 pt-4 pb-0 shadow-md bg-white ${className}`}>
-      <div className="max-w-full mx-auto">
-        <div className="flex items-center justify-between">
-          {/* Left: Title */}
-          <div className="flex items-center ">
+            <header className={`w-full h-16 shadow-lg relative rounded-xl mt-4 transition-all duration-300 hover:shadow-xl ${className}`} style={{backgroundColor: '#F6F2F4', boxShadow: '0 4px 12px rgba(3, 3, 4, 0.12)', border: '1px solid rgba(3, 3, 4, 0.1)'}}>
+
+      <div className="w-full px-6 h-full">
+        <div className="flex items-center h-full">
+          {/* Left Corner: Logo */}
+          <div className="flex items-center space-x-3">
             <img 
               src="/geniusdb logo.png" 
-              alt="GeniusDB - Intelligent Grid Data" 
-              className="w-20 h-16 mr-4 object-contain"
+              alt="GeniusDB Logo" 
+              className="h-20 w-24"
+              style={{filter: 'drop-shadow(2px 2px 4px rgba(3, 3, 4, 0.3))'}}
             />
-            <div>
-              <h1 className="text-2xl font-bold text-blue-600">GeniusDB</h1>
-              <p className="text-xs text-gray-500 -mt-1">Intelligent Grid Data</p>
-            </div>
+            <h1 className="text-3xl font-black">
+              <span style={{color: '#B0DB43',}}>GENIUS</span>
+              <span style={{color: '#DB2763', }}>DB</span>
+            </h1>
           </div>
 
-          {/* Right: children or logout */}
-          <div className="flex items-center">
-            {children ? (
-              children
-            ) : (
-              <div className="flex items-center">
-                {onViewLoad && <SavedViewsDropdown onLoadView={onViewLoad} />}
-                {onLogout ? (
-                  <button
-                    onClick={onLogout}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition ml-2"
-                  >
-                    Logout
-                  </button>
-                ) : null}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile nav: stack below title (or horizontal scroll) */}
-        <nav className="sm:hidden mt-3 flex gap-3 flex-wrap">
-          {menu.map((item) => {
-            const isActive = item === active;
-            return (
+          {/* Center: Navigation */}
+          <nav className="flex items-center space-x-8 flex-1 justify-center">
+            {navigationItems.map((item) => (
               <button
                 key={item}
                 onClick={() => onNavigate(item)}
-                className={`${
-                  isActive
-                    ? "bg-blue-600 text-white px-4 py-2 rounded-lg shadow"
-                    : "text-gray-600 hover:text-blue-600 transition px-3 py-2"
-                }`}
+                        className={`font-medium text-sm uppercase tracking-wide transition-all duration-300 ${
+                          active === item
+                            ? "text-white px-4 py-2 rounded-md shadow-md hover:shadow-lg transform hover:scale-105"
+                            : "px-3 py-2 rounded-md hover:transform hover:scale-105"
+                        }`}
+                        style={{
+                          backgroundColor: active === item ? '#8DE971' : 'transparent',
+                          color: active === item ? 'white' : '#030304',
+                          boxShadow: active === item ? '0 4px 12px rgba(141, 233, 113, 0.3)' : 'none'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (active !== item) {
+                            e.target.style.backgroundColor = '#AD96DC';
+                            e.target.style.color = 'white';
+                            e.target.style.boxShadow = '0 4px 12px rgba(173, 150, 220, 0.3)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (active !== item) {
+                            e.target.style.backgroundColor = 'transparent';
+                            e.target.style.color = '#030304';
+                            e.target.style.boxShadow = 'none';
+                          }
+                        }}
               >
                 {item}
               </button>
-            );
-          })}
-        </nav>
+            ))}
+          </nav>
+
+          {/* Right Corner: Action Buttons */}
+          <div className="flex items-center space-x-3">
+            {/* View Management Button */}
+                    <button
+                      onClick={() => onNavigate("View Management")}
+                      className="px-4 py-2 text-white rounded-md font-medium text-sm uppercase tracking-wide transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+                      style={{
+                        background: 'linear-gradient(135deg, #8DE971 0%, #7AC75E 100%)',
+                        boxShadow: '0 4px 12px rgba(141, 233, 113, 0.3)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.boxShadow = '0 6px 20px rgba(141, 233, 113, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.boxShadow = '0 4px 12px rgba(141, 233, 113, 0.3)';
+                      }}
+                    >
+                      View Management
+                    </button>
+
+            {/* Saved Views Dropdown */}
+            {onViewLoad && (
+                      <div className="rounded-md shadow-md transition-all duration-300 hover:shadow-lg transform hover:scale-105" style={{backgroundColor: '#AD96DC', border: '1px solid rgba(3, 3, 4, 0.1)', boxShadow: '0 4px 12px rgba(173, 150, 220, 0.3)'}}>
+                <SavedViewsDropdown onLoadView={onViewLoad} />
+              </div>
+            )}
+
+            {/* Logout Button */}
+            {onLogout ? (
+                      <button
+                        onClick={onLogout}
+                        className="px-4 py-2 text-white rounded-md font-medium text-sm uppercase tracking-wide transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+                        style={{
+                          backgroundColor: '#FF6B6B',
+                          boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#FF7276';
+                          e.target.style.boxShadow = '0 6px 20px rgba(255, 107, 107, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = '#FF6B6B';
+                          e.target.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.3)';
+                        }}
+                      >
+                        Logout
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onNavigate("Login")}
+                        className="px-4 py-2 text-white rounded-md font-medium text-sm uppercase tracking-wide transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+                        style={{
+                          backgroundColor: '#FF6B6B',
+                          boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#FF7276';
+                          e.target.style.boxShadow = '0 6px 20px rgba(255, 107, 107, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = '#FF6B6B';
+                          e.target.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.3)';
+                        }}
+                      >
+                        Sign Up
+                      </button>
+            )}
+          </div>
+        </div>
       </div>
     </header>
   );

@@ -92,7 +92,7 @@ const AdminPanel = () => {
                   <span
                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       user.status === "Active"
-                        ? "bg-green-100 text-green-800"
+                        ? "bg-geniusAquamarine/20 text-geniusAquamarine"
                         : "bg-red-100 text-red-800"
                     }`}
                   >
@@ -106,7 +106,7 @@ const AdminPanel = () => {
                       className={`px-3 py-1 text-xs rounded ${
                         user.status === "Active"
                           ? "bg-red-100 text-red-700 hover:bg-red-200"
-                          : "bg-green-100 text-green-700 hover:bg-green-200"
+                          : "bg-geniusAquamarine/20 text-geniusAquamarine hover:bg-geniusAquamarine/40"
                       }`}
                     >
                       {user.status === "Active" ? "Deactivate" : "Activate"}
@@ -189,7 +189,7 @@ const AdminPanel = () => {
     <div className="bg-white rounded-2xl shadow-lg p-6">
       <h3 className="text-xl font-semibold text-gray-800 mb-6">System Logs</h3>
 
-      <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+      <div className="bg-gray-900 text-geniusAquamarine p-4 rounded-lg font-mono text-sm overflow-x-auto">
         <div>2024-01-15 10:30:15 - INFO - Server started successfully</div>
         <div>2024-01-15 10:30:16 - INFO - Database connection established</div>
         <div>2024-01-15 10:30:17 - INFO - API endpoints loaded</div>
@@ -224,7 +224,7 @@ const AdminPanel = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+            <button className="w-full px-4 py-2 bg-geniusAquamarine text-black rounded-lg hover:bg-geniusAquamarine/80 transition-colors duration-200">
               Create Backup
             </button>
           </div>
@@ -270,7 +270,7 @@ const AdminPanel = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{backgroundColor: '#F6F2F4'}}>
+    <div className="min-h-screen" style={{ backgroundColor: "#F6F2F4" }}>
       <div className="max-w-7xl mx-auto p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Panel</h1>
 

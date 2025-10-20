@@ -51,10 +51,14 @@ const GoogleMapComponent = ({
   const [markersInitialized, setMarkersInitialized] = useState(false);
 
   // Get Google Maps API key from environment
-  const GOOGLE_MAPS_API_KEY = (window._env_ && window._env_.VITE_GOOGLE_MAPS_API_KEY) || "";
-  
+  const GOOGLE_MAPS_API_KEY =
+    (window._env_ && window._env_.VITE_GOOGLE_MAPS_API_KEY) || "";
+
   // Debug logging
-  console.log("GoogleMapComponent: Google Maps API Key:", GOOGLE_MAPS_API_KEY ? "Present" : "Missing");
+  console.log(
+    "GoogleMapComponent: Google Maps API Key:",
+    GOOGLE_MAPS_API_KEY ? "Present" : "Missing"
+  );
   console.log("GoogleMapComponent: window._env_:", window._env_);
 
   // Load Google Maps API
@@ -89,7 +93,7 @@ const GoogleMapComponent = ({
   // Create custom marker icon based on color and size - using location pin symbol
   const createMarkerIcon = useCallback((color, isClicked = false) => {
     const scale = isClicked ? 1.8 : 1.2; // Larger scale when clicked
-    
+
     // Check if google.maps is available
     if (typeof google === "undefined" || !google || !google.maps) {
       // Fallback to location pin SVG path if Google Maps API is not loaded
@@ -123,7 +127,7 @@ const GoogleMapComponent = ({
       console.log("Markers disabled, returning empty markers array");
       return [];
     }
-    
+
     if (!data || data.length === 0) {
       console.log("No data provided, returning empty markers array");
       return [];
@@ -193,9 +197,9 @@ const GoogleMapComponent = ({
       externalMarkersLength: externalMarkers.length,
       processedMarkersLength: processedMarkers.length,
       externalMarkers: externalMarkers.slice(0, 2),
-      processedMarkers: processedMarkers.slice(0, 2)
+      processedMarkers: processedMarkers.slice(0, 2),
     });
-    
+
     if (externalMarkers.length > 0) {
       console.log("Using external markers:", externalMarkers.length);
       return externalMarkers;
@@ -213,20 +217,36 @@ const GoogleMapComponent = ({
       showMarkers,
       mapLoaded,
       isHomePage,
-      activeView
+      activeView,
     });
-    console.log("GoogleMapComponent: Sample marker IDs:", markers.slice(0, 3).map(m => m.id));
-  }, [markers, externalMarkers, processedMarkers, showMarkers, mapLoaded, isHomePage, activeView]);
+    console.log(
+      "GoogleMapComponent: Sample marker IDs:",
+      markers.slice(0, 3).map((m) => m.id)
+    );
+  }, [
+    markers,
+    externalMarkers,
+    processedMarkers,
+    showMarkers,
+    mapLoaded,
+    isHomePage,
+    activeView,
+  ]);
 
   // Effect to handle marker rendering when map is loaded
   useEffect(() => {
     if (mapLoaded && map && markers.length > 0 && showMarkers) {
-      console.log("GoogleMapComponent: Map loaded and markers available, count:", markers.length);
+      console.log(
+        "GoogleMapComponent: Map loaded and markers available, count:",
+        markers.length
+      );
       console.log("GoogleMapComponent: Force re-render triggered");
       setMarkersInitialized(true);
       // Markers will be rendered by the JSX conditional rendering
     } else if (markers.length === 0 && markersInitialized) {
-      console.log("GoogleMapComponent: Markers cleared, but keeping initialization state");
+      console.log(
+        "GoogleMapComponent: Markers cleared, but keeping initialization state"
+      );
     } else if (!showMarkers) {
       console.log("GoogleMapComponent: Markers disabled by showMarkers prop");
     }
@@ -269,7 +289,10 @@ const GoogleMapComponent = ({
   const onLoad = useCallback(
     function callback(map) {
       console.log("Google Map loaded successfully");
-      console.log("GoogleMapComponent: Map loaded with markers:", markers.length);
+      console.log(
+        "GoogleMapComponent: Map loaded with markers:",
+        markers.length
+      );
       setMap(map);
       setMapLoaded(true);
       // Bounds fitting is handled by the separate useEffect above
@@ -333,9 +356,7 @@ const GoogleMapComponent = ({
   return (
     <div
       className={`map-container relative w-full overflow-hidden ${
-        isHomePage
-          ? "home-page-map-container"
-          : "h-[calc(100%-2rem)]"
+        isHomePage ? "home-page-map-container" : "h-[calc(100%-2rem)]"
       }`}
     >
       <GoogleMap
@@ -355,36 +376,40 @@ const GoogleMapComponent = ({
           gestureHandling: "auto",
         }}
       >
-        {mapLoaded && showMarkers && markers.length > 0 && (() => {
-          console.log("GoogleMapComponent: Rendering markers:", {
-            mapLoaded,
-            showMarkers,
-            markersLength: markers.length,
-            markers: markers.slice(0, 3)
-          });
-          return true;
-        })() && markers.map((marker) => {
-          // Ensure marker position is valid before rendering
-          if (
-            !marker.position ||
-            isNaN(marker.position.lat) ||
-            isNaN(marker.position.lng)
-          ) {
-            console.log("Skipping marker with invalid position:", marker);
-            return null;
-          }
+        {mapLoaded &&
+          showMarkers &&
+          markers.length > 0 &&
+          (() => {
+            console.log("GoogleMapComponent: Rendering markers:", {
+              mapLoaded,
+              showMarkers,
+              markersLength: markers.length,
+              markers: markers.slice(0, 3),
+            });
+            return true;
+          })() &&
+          markers.map((marker) => {
+            // Ensure marker position is valid before rendering
+            if (
+              !marker.position ||
+              isNaN(marker.position.lat) ||
+              isNaN(marker.position.lng)
+            ) {
+              console.log("Skipping marker with invalid position:", marker);
+              return null;
+            }
 
-          console.log("Rendering marker:", marker);
-          const isClicked = clickedMarkerId === marker.id;
-          return (
-            <Marker
-              key={marker.id}
-              position={marker.position}
-              icon={createMarkerIcon(marker.color, isClicked)}
-              onClick={() => handleMarkerClick(marker)}
-            />
-          );
-        })}
+            console.log("Rendering marker:", marker);
+            const isClicked = clickedMarkerId === marker.id;
+            return (
+              <Marker
+                key={marker.id}
+                position={marker.position}
+                icon={createMarkerIcon(marker.color, isClicked)}
+                onClick={() => handleMarkerClick(marker)}
+              />
+            );
+          })}
 
         {/* InfoWindow popup disabled - no popup will show when markers are clicked */}
         {false && mapLoaded && selectedMarker && (
@@ -403,7 +428,7 @@ const GoogleMapComponent = ({
                     <span
                       className={
                         selectedMarker.generationHeadroom >= 50
-                          ? "text-green-600"
+                          ? "text-geniusAquamarine"
                           : selectedMarker.generationHeadroom >= 20
                           ? "text-orange-500"
                           : "text-red-600"

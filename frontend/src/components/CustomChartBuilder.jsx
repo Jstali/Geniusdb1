@@ -184,7 +184,7 @@ const CustomChartBuilder = ({
 
       // Get API base URL from environment
       const API_BASE = (window._env_ && window._env_.API_BASE) || "";
-      
+
       // First, trigger the data processing script
       const processResponse = await fetch(`${API_BASE}/process/transformers`);
       if (!processResponse.ok) {
@@ -241,14 +241,14 @@ const CustomChartBuilder = ({
         xAxis,
         yAxis,
         chartType,
-        filters
+        filters,
       });
 
       const requestBody = {
         x_axis: xAxis,
         y_axis: yAxis,
         chart_type: chartType,
-        filters: filters
+        filters: filters,
       };
 
       const API_BASE = (window._env_ && window._env_.API_BASE) || "";
@@ -502,11 +502,20 @@ const CustomChartBuilder = ({
     try {
       // Try to use the new chart-data endpoint for better performance and filtering
       let chartDataToUse = chartData;
-      
+
       // If we have filters or want to use the dedicated endpoint, use it
-      if (Object.keys(filters).length > 0 || !chartData || chartData.length === 0) {
+      if (
+        Object.keys(filters).length > 0 ||
+        !chartData ||
+        chartData.length === 0
+      ) {
         console.log("Using dedicated chart-data endpoint");
-        chartDataToUse = await fetchChartData(xAxisState, yAxisState, chartTypeState, filters);
+        chartDataToUse = await fetchChartData(
+          xAxisState,
+          yAxisState,
+          chartTypeState,
+          filters
+        );
       }
 
       if (!chartDataToUse || chartDataToUse.length === 0) {
@@ -517,8 +526,12 @@ const CustomChartBuilder = ({
       }
 
       // Find the actual keys for the selected headers
-      const xColumn = columnOptions.find((col) => col.accessorKey === xAxisState);
-      const yColumn = columnOptions.find((col) => col.accessorKey === yAxisState);
+      const xColumn = columnOptions.find(
+        (col) => col.accessorKey === xAxisState
+      );
+      const yColumn = columnOptions.find(
+        (col) => col.accessorKey === yAxisState
+      );
 
       const xKey = xColumn ? xColumn.accessorKey : xAxisState;
       const yKey = yColumn ? yColumn.accessorKey : yAxisState;
@@ -529,7 +542,9 @@ const CustomChartBuilder = ({
       // Prepare data for plotting
       let xValues = chartDataToUse.map((item) => item[xKey]);
       let yValues =
-        chartTypeState !== "pie" ? chartDataToUse.map((item) => item[yKey]) : null;
+        chartTypeState !== "pie"
+          ? chartDataToUse.map((item) => item[yKey])
+          : null;
 
       console.log("X values:", xValues);
       console.log("Y values:", yValues);
@@ -1177,7 +1192,7 @@ const CustomChartBuilder = ({
         // Create notification element
         const notification = document.createElement("div");
         notification.className =
-          "fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50";
+          "fixed top-4 right-4 bg-geniusAquamarine text-black px-4 py-2 rounded-lg shadow-lg z-50";
         notification.textContent =
           "Chart updated with saved view configuration";
 
@@ -1268,9 +1283,15 @@ const CustomChartBuilder = ({
               selectedColumns.length < 2
             }
           >
-            <option value="" className="text-gray-600">Select column</option>
+            <option value="" className="text-gray-600">
+              Select column
+            </option>
             {xColumnOptions.map((col) => (
-              <option key={col.accessorKey} value={col.accessorKey} className="text-gray-900">
+              <option
+                key={col.accessorKey}
+                value={col.accessorKey}
+                className="text-gray-900"
+              >
                 {col.header}
               </option>
             ))}
@@ -1292,9 +1313,15 @@ const CustomChartBuilder = ({
                 selectedColumns.length < 2
               }
             >
-              <option value="" className="text-gray-600">Select column</option>
+              <option value="" className="text-gray-600">
+                Select column
+              </option>
               {yColumnOptions.map((col) => (
-                <option key={col.accessorKey} value={col.accessorKey} className="text-gray-900">
+                <option
+                  key={col.accessorKey}
+                  value={col.accessorKey}
+                  className="text-gray-900"
+                >
                   {col.header}
                 </option>
               ))}

@@ -269,7 +269,7 @@ const HomePageMap = ({
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex items-center">
-          <div className="w-4 h-4 bg-green-600 rounded-full mr-2"></div>
+          <div className="w-4 h-4 bg-geniusAquamarine rounded-full mr-2"></div>
           <span className="text-sm">Green: ≥ 50MW ({greenMarkers})</span>
         </div>
         <div className="flex items-center">
@@ -299,9 +299,13 @@ const HomePageMap = ({
             {filteredMapData.length}
           </span>
         </div>
-        <div className="bg-green-50 px-3 py-2 rounded-lg">
-          <span className="text-sm font-medium text-green-800">Center:</span>
-          <span className="text-sm text-green-600 ml-2">52.0000, 0.5000</span>
+        <div className="bg-geniusAquamarine/10 px-3 py-2 rounded-lg">
+          <span className="text-sm font-medium text-geniusAquamarine">
+            Center:
+          </span>
+          <span className="text-sm text-geniusAquamarine ml-2">
+            52.0000, 0.5000
+          </span>
         </div>
         <div className="bg-purple-50 px-3 py-2 rounded-lg">
           <span className="text-sm font-medium text-purple-800">Zoom:</span>

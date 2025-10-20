@@ -8,9 +8,12 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 // Fix for default markers in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
 // Function to determine marker color based on generation headroom
@@ -20,8 +23,9 @@ const getMarkerColor = (headroom) => {
   }
 
   // Convert to number if it's a string
-  const numericHeadroom = typeof headroom === 'string' ? parseFloat(headroom) : headroom;
-  
+  const numericHeadroom =
+    typeof headroom === "string" ? parseFloat(headroom) : headroom;
+
   if (isNaN(numericHeadroom)) {
     return "#808080"; // Gray for invalid values
   }
@@ -78,7 +82,7 @@ const createCustomIcon = (color) => {
     `,
     iconSize: [24, 24],
     iconAnchor: [12, 24],
-    popupAnchor: [0, -24]
+    popupAnchor: [0, -24],
   });
 };
 
@@ -89,12 +93,16 @@ const MapBoundsFitter = ({ markers, isHomePage }) => {
   useEffect(() => {
     if (markers.length > 0 && !isHomePage) {
       const group = new L.featureGroup();
-      markers.forEach(marker => {
-        if (marker.position && !isNaN(marker.position.lat) && !isNaN(marker.position.lng)) {
+      markers.forEach((marker) => {
+        if (
+          marker.position &&
+          !isNaN(marker.position.lat) &&
+          !isNaN(marker.position.lng)
+        ) {
           group.addLayer(L.marker([marker.position.lat, marker.position.lng]));
         }
       });
-      
+
       if (group.getLayers().length > 0) {
         map.fitBounds(group.getBounds(), { padding: [20, 20] });
       }
@@ -112,8 +120,7 @@ const ClusteredMarkers = ({ markers, onMarkerClick }) => {
     if (markers.length === 0) return;
 
     // Create marker cluster group
-    const clusterGroup = L.markerClusterGroup({
-    });
+    const clusterGroup = L.markerClusterGroup({});
 
     // Add markers to cluster group
     markers.forEach((marker) => {
@@ -122,37 +129,61 @@ const ClusteredMarkers = ({ markers, onMarkerClick }) => {
         !isNaN(marker.position.lat) &&
         !isNaN(marker.position.lng)
       ) {
-        const leafletMarker = L.marker([marker.position.lat, marker.position.lng], {
-          icon: createCustomIcon(marker.color)
-        });
+        const leafletMarker = L.marker(
+          [marker.position.lat, marker.position.lng],
+          {
+            icon: createCustomIcon(marker.color),
+          }
+        );
 
         // Add popup
         leafletMarker.bindPopup(`
           <div class="p-2">
             <h3 class="font-bold text-lg mb-1">${marker.siteName}</h3>
-            ${marker.generationHeadroom !== null && marker.generationHeadroom !== undefined ? `
+            ${
+              marker.generationHeadroom !== null &&
+              marker.generationHeadroom !== undefined
+                ? `
               <p class="text-sm mt-1">
                 <span class="font-medium">Generation Headroom:</span>
-                <span class="${marker.generationHeadroom >= 50 ? 'text-green-600' : marker.generationHeadroom >= 0 ? 'text-orange-500' : marker.generationHeadroom >= -50 ? 'text-red-500' : 'text-red-700'}">
+                <span class="${
+                  marker.generationHeadroom >= 50
+                    ? "text-geniusAquamarine"
+                    : marker.generationHeadroom >= 0
+                    ? "text-orange-500"
+                    : marker.generationHeadroom >= -50
+                    ? "text-red-500"
+                    : "text-red-700"
+                }">
                   ${marker.generationHeadroom} MW
                 </span>
               </p>
-            ` : ''}
-            ${marker.siteVoltage ? `
+            `
+                : ""
+            }
+            ${
+              marker.siteVoltage
+                ? `
               <p class="text-xs mt-1">
                 <span class="font-medium">Voltage:</span> ${marker.siteVoltage} kV
               </p>
-            ` : ''}
-            ${marker.county ? `
+            `
+                : ""
+            }
+            ${
+              marker.county
+                ? `
               <p class="text-xs mt-1">
                 <span class="font-medium">County:</span> ${marker.county}
               </p>
-            ` : ''}
+            `
+                : ""
+            }
           </div>
         `);
 
         // Add click handler
-        leafletMarker.on('click', () => {
+        leafletMarker.on("click", () => {
           if (onMarkerClick) {
             onMarkerClick(marker);
           }
@@ -198,7 +229,7 @@ const LeafletMapComponent = ({
     if (!showMarkers) {
       return [];
     }
-    
+
     if (!data || data.length === 0) {
       return [];
     }
@@ -232,9 +263,10 @@ const LeafletMapComponent = ({
           return null; // Skip invalid coordinates
         }
 
-        const headroomValue = site.generation_headroom || site["Generation Headroom Mw"] || null;
+        const headroomValue =
+          site.generation_headroom || site["Generation Headroom Mw"] || null;
         const markerColor = getMarkerColor(headroomValue);
-        
+
         const marker = {
           position: { lat: parseFloat(lat), lng: parseFloat(lng) },
           color: markerColor,
@@ -293,9 +325,11 @@ const LeafletMapComponent = ({
   }
 
   return (
-    <div className={`map-container relative w-full overflow-hidden ${
-      isHomePage ? "home-page-map-container" : "h-[calc(100%-2rem)]"
-    }`}>
+    <div
+      className={`map-container relative w-full overflow-hidden ${
+        isHomePage ? "home-page-map-container" : "h-[calc(100%-2rem)]"
+      }`}
+    >
       <MapContainer
         center={isHomePage ? homePageCenter : center}
         zoom={isHomePage ? homePageZoom : defaultZoom}
@@ -307,9 +341,12 @@ const LeafletMapComponent = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
+
         <MapBoundsFitter markers={markers} isHomePage={isHomePage} />
-        <ClusteredMarkers markers={showMarkers ? markers : []} onMarkerClick={handleMarkerClick} />
+        <ClusteredMarkers
+          markers={showMarkers ? markers : []}
+          onMarkerClick={handleMarkerClick}
+        />
       </MapContainer>
     </div>
   );

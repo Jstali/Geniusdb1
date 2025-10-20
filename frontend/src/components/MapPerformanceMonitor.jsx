@@ -53,7 +53,7 @@ const MapPerformanceMonitor = ({ markers, isVisible = false }) => {
       <div>FPS: {performance.fps}</div>
       <div>Memory: {performance.memoryUsage}MB</div>
       <div className="mt-2">
-        <div className={`text-xs ${performance.fps >= 30 ? 'text-green-400' : performance.fps >= 20 ? 'text-yellow-400' : 'text-red-400'}`}>
+  <div className={`text-xs ${performance.fps >= 30 ? 'text-geniusAquamarine' : performance.fps >= 20 ? 'text-yellow-400' : 'text-red-400'}`}>
           {performance.fps >= 30 ? '✅ Smooth' : performance.fps >= 20 ? '⚠️ Moderate' : '❌ Laggy'}
         </div>
       </div>

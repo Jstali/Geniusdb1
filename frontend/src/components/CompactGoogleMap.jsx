@@ -55,14 +55,14 @@ const CompactGoogleMap = ({
     dataType: typeof data,
     filters,
     activeView,
-    selectedColumns
+    selectedColumns,
   });
-  
+
   // Debug: Log the first data item to see structure
   if (data && data.length > 0) {
     console.log("CompactGoogleMap: First data item structure:", {
       keys: Object.keys(data[0]),
-      sampleItem: data[0]
+      sampleItem: data[0],
     });
   }
 
@@ -112,12 +112,14 @@ const CompactGoogleMap = ({
           dataLength: data?.length || 0,
           isHomePage,
           activeView,
-          effectiveFilters
+          effectiveFilters,
         });
-        
+
         // Check if we have any data at all
         if (!data || data.length === 0) {
-          console.log("CompactGoogleMap: No data provided, creating test markers");
+          console.log(
+            "CompactGoogleMap: No data provided, creating test markers"
+          );
           const testMarkers = [
             {
               id: "test-marker-1",
@@ -127,12 +129,12 @@ const CompactGoogleMap = ({
               color: "#008000",
             },
             {
-              id: "test-marker-2", 
+              id: "test-marker-2",
               position: { lat: 53.4808, lng: -2.2426 }, // Manchester
               popupText: "Test Marker - Manchester",
               siteName: "Test Site 2",
               color: "#FFA500",
-            }
+            },
           ];
           setMarkers(testMarkers);
           setLastSuccessfulMarkers(testMarkers);
@@ -148,18 +150,30 @@ const CompactGoogleMap = ({
 
         // If we have an active view, always fetch from backend regardless of parent data
         if (activeView) {
-          console.log("CompactGoogleMap: Active view detected, fetching from backend");
+          console.log(
+            "CompactGoogleMap: Active view detected, fetching from backend"
+          );
           // This will be handled in the else if (activeView) block below
         } else if (data && data.length > 0) {
-          console.log("CompactGoogleMap: Processing data with length:", data.length);
-          
+          console.log(
+            "CompactGoogleMap: Processing data with length:",
+            data.length
+          );
+
           // Check if we have spatial coordinates in the data
-          const hasSpatialCoords = data.some(site => site["Spatial Coordinates"]);
-          console.log("CompactGoogleMap: Data has spatial coordinates:", hasSpatialCoords);
-          
+          const hasSpatialCoords = data.some(
+            (site) => site["Spatial Coordinates"]
+          );
+          console.log(
+            "CompactGoogleMap: Data has spatial coordinates:",
+            hasSpatialCoords
+          );
+
           if (!hasSpatialCoords) {
-            console.log("CompactGoogleMap: No spatial coordinates found in data. Available keys:", 
-              data.length > 0 ? Object.keys(data[0]) : "No data");
+            console.log(
+              "CompactGoogleMap: No spatial coordinates found in data. Available keys:",
+              data.length > 0 ? Object.keys(data[0]) : "No data"
+            );
           }
           // Apply client-side filtering to the data
           const filteredData = data.filter((site) => {
@@ -188,15 +202,21 @@ const CompactGoogleMap = ({
 
             // Power range filter
             if (effectiveFilters.powerRange?.min !== undefined) {
-              const headroom = parseFloat(site["Generation Headroom Mw"] || site.generation_headroom);
-              if (isNaN(headroom) || headroom < effectiveFilters.powerRange.min) {
+              const headroom = parseFloat(
+                site["Generation Headroom Mw"] || site.generation_headroom
+              );
+              if (
+                isNaN(headroom) ||
+                headroom < effectiveFilters.powerRange.min
+              ) {
                 return false;
               }
             }
 
             // Operator filter
             if (effectiveFilters.operators) {
-              const licenceArea = site["Licence Area"] || site.licence_area || "";
+              const licenceArea =
+                site["Licence Area"] || site.licence_area || "";
               if (licenceArea !== effectiveFilters.operators) {
                 return false;
               }
@@ -211,45 +231,49 @@ const CompactGoogleMap = ({
           const transformedMarkers = filteredData
             .map((site, index) => {
               // Try different possible coordinate field names
-              const spatialCoords = site["Spatial Coordinates"] || 
-                                  site["spatial_coordinates"] || 
-                                  site["coordinates"] || 
-                                  site["lat_lng"] ||
-                                  site["position"];
-              
+              const spatialCoords =
+                site["Spatial Coordinates"] ||
+                site["spatial_coordinates"] ||
+                site["coordinates"] ||
+                site["lat_lng"] ||
+                site["position"];
+
               console.log(`Processing site ${index}:`, {
                 siteName: site["Site Name"],
                 spatialCoords: spatialCoords,
                 type: typeof spatialCoords,
-                availableKeys: Object.keys(site).filter(key => 
-                  key.toLowerCase().includes('coord') || 
-                  key.toLowerCase().includes('lat') || 
-                  key.toLowerCase().includes('lng') ||
-                  key.toLowerCase().includes('position')
-                )
+                availableKeys: Object.keys(site).filter(
+                  (key) =>
+                    key.toLowerCase().includes("coord") ||
+                    key.toLowerCase().includes("lat") ||
+                    key.toLowerCase().includes("lng") ||
+                    key.toLowerCase().includes("position")
+                ),
               });
-              
+
               if (!spatialCoords || spatialCoords === "\\N") {
-                console.log(`Skipping site ${index} - no valid spatial coordinates`);
+                console.log(
+                  `Skipping site ${index} - no valid spatial coordinates`
+                );
                 return null;
               }
 
               try {
                 // Handle different coordinate formats
                 let coords;
-                
+
                 // Check if it's already an array
                 if (Array.isArray(spatialCoords)) {
-                  coords = spatialCoords.map(coord => parseFloat(coord));
+                  coords = spatialCoords.map((coord) => parseFloat(coord));
                 } else {
                   // Split by comma and parse
                   coords = spatialCoords
                     .split(",")
                     .map((coord) => parseFloat(coord.trim()));
                 }
-                
+
                 console.log(`Parsed coordinates for site ${index}:`, coords);
-                
+
                 if (
                   coords.length !== 2 ||
                   isNaN(coords[0]) ||
@@ -262,37 +286,52 @@ const CompactGoogleMap = ({
                 const [lat, lng] = coords;
 
                 if (isNaN(lat) || isNaN(lng)) {
-                  console.log(`NaN coordinates for site ${index}:`, { lat, lng });
+                  console.log(`NaN coordinates for site ${index}:`, {
+                    lat,
+                    lng,
+                  });
                   return null;
                 }
 
                 // Validate coordinate ranges (rough bounds for UK)
                 if (lat < 49 || lat > 61 || lng < -8 || lng > 2) {
-                  console.log(`Coordinates out of UK range for site ${index}:`, { lat, lng });
+                  console.log(
+                    `Coordinates out of UK range for site ${index}:`,
+                    { lat, lng }
+                  );
                   // Don't return null - just log the warning, as coordinates might be valid
                 }
 
                 const marker = {
-                  id: `${site["Site Name"] || site.site_name || "Site"}-${index}`,
+                  id: `${
+                    site["Site Name"] || site.site_name || "Site"
+                  }-${index}`,
                   position: { lat, lng },
-                  popupText: site["Site Name"] || site.site_name || "Unknown Site",
-                  siteName: site["Site Name"] || site.site_name || "Unknown Site",
+                  popupText:
+                    site["Site Name"] || site.site_name || "Unknown Site",
+                  siteName:
+                    site["Site Name"] || site.site_name || "Unknown Site",
                   siteType: site["Site Type"] || site.site_type || "Unknown",
-                  siteVoltage: site["Site Voltage"] || site.site_voltage || "Unknown",
+                  siteVoltage:
+                    site["Site Voltage"] || site.site_voltage || "Unknown",
                   county: site["County"] || site.county || "Unknown",
-                  generationHeadroom: site["Generation Headroom Mw"] || site.generation_headroom,
-                  licenceArea: site["Licence Area"] || site.licence_area || "Unknown",
-                  color: getMarkerColor(site["Generation Headroom Mw"] || site.generation_headroom),
+                  generationHeadroom:
+                    site["Generation Headroom Mw"] || site.generation_headroom,
+                  licenceArea:
+                    site["Licence Area"] || site.licence_area || "Unknown",
+                  color: getMarkerColor(
+                    site["Generation Headroom Mw"] || site.generation_headroom
+                  ),
                   ...site,
                 };
-                
+
                 console.log(`Created marker for site ${index}:`, {
                   id: marker.id,
                   position: marker.position,
                   siteName: marker.siteName,
-                  color: marker.color
+                  color: marker.color,
                 });
-                
+
                 return marker;
               } catch (parseError) {
                 console.error("Error parsing coordinates:", parseError);
@@ -301,14 +340,23 @@ const CompactGoogleMap = ({
             })
             .filter((marker) => marker !== null);
 
-          console.log("CompactGoogleMap: Setting markers from parent data:", transformedMarkers.length);
-          console.log("CompactGoogleMap: Sample markers:", transformedMarkers.slice(0, 3));
-          console.log("CompactGoogleMap: Successfully created markers from spatial coordinates:", {
-            totalSites: filteredData.length,
-            successfulMarkers: transformedMarkers.length,
-            failedMarkers: filteredData.length - transformedMarkers.length
-          });
-          
+          console.log(
+            "CompactGoogleMap: Setting markers from parent data:",
+            transformedMarkers.length
+          );
+          console.log(
+            "CompactGoogleMap: Sample markers:",
+            transformedMarkers.slice(0, 3)
+          );
+          console.log(
+            "CompactGoogleMap: Successfully created markers from spatial coordinates:",
+            {
+              totalSites: filteredData.length,
+              successfulMarkers: transformedMarkers.length,
+              failedMarkers: filteredData.length - transformedMarkers.length,
+            }
+          );
+
           // Always add a test marker for debugging
           console.log("CompactGoogleMap: Adding test marker for debugging");
           const testMarker = {
@@ -325,7 +373,7 @@ const CompactGoogleMap = ({
           };
           transformedMarkers.push(testMarker);
           console.log("CompactGoogleMap: Added test marker:", testMarker);
-          
+
           setMarkers(transformedMarkers);
           setLastSuccessfulMarkers(transformedMarkers);
           setDataLoaded(true);
@@ -349,28 +397,39 @@ const CompactGoogleMap = ({
           // Use selectedColumns from props if available, otherwise use default location columns
           const defaultLocationColumns = [
             "site_name",
-            "latitude", 
+            "latitude",
             "longitude",
             "voltage_level",
             "available_power",
             "network_operator",
           ];
-          
+
           // If selectedColumns are provided, use them but ensure location columns are included
           let columnsToUse;
           if (selectedColumns && selectedColumns.length > 0) {
             // Add location columns if they're not already included
             const locationColumns = ["latitude", "longitude", "site_name"];
-            columnsToUse = [...new Set([...selectedColumns, ...locationColumns])];
+            columnsToUse = [
+              ...new Set([...selectedColumns, ...locationColumns]),
+            ];
           } else {
             columnsToUse = defaultLocationColumns;
           }
-            
-          console.log("CompactGoogleMap: Using columns for map data:", columnsToUse);
-          console.log("CompactGoogleMap: selectedColumns from props:", selectedColumns);
-          console.log("CompactGoogleMap: defaultLocationColumns:", defaultLocationColumns);
+
+          console.log(
+            "CompactGoogleMap: Using columns for map data:",
+            columnsToUse
+          );
+          console.log(
+            "CompactGoogleMap: selectedColumns from props:",
+            selectedColumns
+          );
+          console.log(
+            "CompactGoogleMap: defaultLocationColumns:",
+            defaultLocationColumns
+          );
           console.log("CompactGoogleMap: activeView:", activeView);
-          
+
           const payload = {
             filters: backendFilters,
             selected_columns: columnsToUse,
@@ -401,24 +460,29 @@ const CompactGoogleMap = ({
           }
 
           // Transform backend response to markers with proper numeric parsing
-          console.log("CompactGoogleMap: Processing backend response rows:", result.rows.length);
+          console.log(
+            "CompactGoogleMap: Processing backend response rows:",
+            result.rows.length
+          );
           console.log("CompactGoogleMap: Sample row:", result.rows[0]);
-          
+
           const transformedMarkers = result.rows
             .map((row, index) => {
               console.log(`Processing row ${index}:`, {
                 site_name: row.site_name,
                 latitude: row.latitude,
                 longitude: row.longitude,
-                available_power: row.available_power
+                available_power: row.available_power,
               });
-              
+
               const lat = parseFloat(row.latitude);
               const lng = parseFloat(row.longitude);
 
               // Only include sites with valid coordinates
               if (isNaN(lat) || isNaN(lng)) {
-                console.log(`Skipping row ${index} - invalid coordinates: lat=${lat}, lng=${lng}`);
+                console.log(
+                  `Skipping row ${index} - invalid coordinates: lat=${lat}, lng=${lng}`
+                );
                 return null;
               }
 
@@ -436,7 +500,11 @@ const CompactGoogleMap = ({
             })
             .filter((marker) => marker !== null); // Remove null markers
 
-          console.log("Setting markers from active view:", transformedMarkers.length, "markers");
+          console.log(
+            "Setting markers from active view:",
+            transformedMarkers.length,
+            "markers"
+          );
           console.log("Sample transformed marker:", transformedMarkers[0]);
           setMarkers(transformedMarkers);
           setLastSuccessfulMarkers(transformedMarkers);
@@ -460,27 +528,38 @@ const CompactGoogleMap = ({
           // Use selectedColumns from props if available, otherwise use default location columns
           const defaultLocationColumns = [
             "site_name",
-            "latitude", 
+            "latitude",
             "longitude",
             "voltage_level",
             "available_power",
             "network_operator",
           ];
-          
+
           // If selectedColumns are provided, use them but ensure location columns are included
           let columnsToUse;
           if (selectedColumns && selectedColumns.length > 0) {
             // Add location columns if they're not already included
             const locationColumns = ["latitude", "longitude", "site_name"];
-            columnsToUse = [...new Set([...selectedColumns, ...locationColumns])];
+            columnsToUse = [
+              ...new Set([...selectedColumns, ...locationColumns]),
+            ];
           } else {
             columnsToUse = defaultLocationColumns;
           }
-            
-          console.log("CompactGoogleMap: Using columns for home page map data:", columnsToUse);
-          console.log("CompactGoogleMap: selectedColumns from props (home page):", selectedColumns);
-          console.log("CompactGoogleMap: defaultLocationColumns (home page):", defaultLocationColumns);
-          
+
+          console.log(
+            "CompactGoogleMap: Using columns for home page map data:",
+            columnsToUse
+          );
+          console.log(
+            "CompactGoogleMap: selectedColumns from props (home page):",
+            selectedColumns
+          );
+          console.log(
+            "CompactGoogleMap: defaultLocationColumns (home page):",
+            defaultLocationColumns
+          );
+
           const payload = {
             filters: backendFilters,
             selected_columns: columnsToUse,
@@ -681,12 +760,26 @@ const CompactGoogleMap = ({
         abortControllerRef.current.abort();
       }
     };
-  }, [data, isHomePage, selectedColumns, activeView, effectiveFilters, getMarkerColor]);
+  }, [
+    data,
+    isHomePage,
+    selectedColumns,
+    activeView,
+    effectiveFilters,
+    getMarkerColor,
+  ]);
 
   // Fallback mechanism: if markers are empty but we have successful markers, restore them
   useEffect(() => {
-    if (markers.length === 0 && lastSuccessfulMarkers.length > 0 && !loading && dataLoaded) {
-      console.log("CompactGoogleMap: Restoring markers from last successful state");
+    if (
+      markers.length === 0 &&
+      lastSuccessfulMarkers.length > 0 &&
+      !loading &&
+      dataLoaded
+    ) {
+      console.log(
+        "CompactGoogleMap: Restoring markers from last successful state"
+      );
       setMarkers(lastSuccessfulMarkers);
     }
   }, [markers, lastSuccessfulMarkers, loading, dataLoaded]);
@@ -719,9 +812,7 @@ const CompactGoogleMap = ({
     <div className="w-full h-full" style={{ zIndex: "1" }}>
       <div
         className={`map-container relative w-full overflow-hidden ${
-          isHomePage
-            ? "home-page-map-container"
-            : "h-[calc(100%-2rem)]"
+          isHomePage ? "home-page-map-container" : "h-[calc(100%-2rem)]"
         }`}
         style={{ height: "600px" }}
       >
@@ -735,7 +826,7 @@ const CompactGoogleMap = ({
           markers={markers}
           showMarkers={true}
         />
-        
+
         {/* Info Button with Hover Popup */}
         <div className="absolute top-4 right-4 z-10">
           <div className="relative group">
@@ -746,15 +837,19 @@ const CompactGoogleMap = ({
             >
               <span className="text-sm font-bold">i</span>
             </button>
-            
+
             {/* Hover Popup */}
             <div className="absolute top-10 right-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
               <div className="p-4">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">Pin Color Legend</h3>
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Pin Color Legend
+                </h3>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0"></div>
-                    <span className="text-gray-700">Green - 50MW Generation Headroom and greater</span>
+                    <div className="w-4 h-4 rounded-full bg-geniusAquamarine flex-shrink-0"></div>
+                    <span className="text-gray-700">
+                      Green - 50MW Generation Headroom and greater
+                    </span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 rounded-full bg-orange-500 flex-shrink-0"></div>

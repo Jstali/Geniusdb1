@@ -116,15 +116,25 @@ const ViewManagementModal = ({
 
       // Parse all saved configurations
       const savedFilters = data.filters ? JSON.parse(data.filters) : {};
-      const savedChartConfig = data.chart_config ? JSON.parse(data.chart_config) : { type: "bar", xAxis: "", yAxis: "" };
-      const savedMapConfig = data.map_config ? JSON.parse(data.map_config) : { locationColumn: "Site Name", showMarkers: true, markerFilter: [] };
-      const savedSortConfig = data.sort_config ? JSON.parse(data.sort_config) : { sortBy: [], sortDirection: "asc" };
-      const savedPaginationConfig = data.pagination_config ? JSON.parse(data.pagination_config) : { pageSize: 10, currentPage: 1 };
+      const savedChartConfig = data.chart_config
+        ? JSON.parse(data.chart_config)
+        : { type: "bar", xAxis: "", yAxis: "" };
+      const savedMapConfig = data.map_config
+        ? JSON.parse(data.map_config)
+        : { locationColumn: "Site Name", showMarkers: true, markerFilter: [] };
+      const savedSortConfig = data.sort_config
+        ? JSON.parse(data.sort_config)
+        : { sortBy: [], sortDirection: "asc" };
+      const savedPaginationConfig = data.pagination_config
+        ? JSON.parse(data.pagination_config)
+        : { pageSize: 10, currentPage: 1 };
 
       // Apply the loaded view configuration with all saved state
       onLoadView({
         tableView: {
-          selectedColumns: data.selected_columns ? data.selected_columns.split(",") : [],
+          selectedColumns: data.selected_columns
+            ? data.selected_columns.split(",")
+            : [],
           filters: savedFilters,
           sortBy: savedSortConfig.sortBy,
           sortDirection: savedSortConfig.sortDirection,
@@ -193,16 +203,16 @@ const ViewManagementModal = ({
         map_config: JSON.stringify({
           locationColumn: "Site Name", // Default location column for map
           showMarkers: true,
-          markerFilter: selectedColumns // Only show markers for selected columns
+          markerFilter: selectedColumns, // Only show markers for selected columns
         }),
         sort_config: JSON.stringify({
           sortBy: currentTableView?.sortBy || [],
-          sortDirection: currentTableView?.sortDirection || "asc"
+          sortDirection: currentTableView?.sortDirection || "asc",
         }),
         pagination_config: JSON.stringify({
           pageSize: currentTableView?.pageSize || 10,
-          currentPage: currentTableView?.currentPage || 1
-        })
+          currentPage: currentTableView?.currentPage || 1,
+        }),
       };
 
       console.log("Saving view with payload:", payload);
@@ -247,10 +257,10 @@ const ViewManagementModal = ({
       // Notify parent component that view was saved
       if (onLoadView) {
         onLoadView({
-        tableView: {
-          selectedColumns: selectedColumns,
-          filters: currentTableView?.filters || {},
-        },
+          tableView: {
+            selectedColumns: selectedColumns,
+            filters: currentTableView?.filters || {},
+          },
           chartView: chartConfig,
         });
       }
@@ -406,7 +416,7 @@ const ViewManagementModal = ({
           )}
 
           {success && (
-            <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-md text-sm">
+            <div className="mb-4 p-3 bg-geniusAquamarine/10 text-geniusAquamarine rounded-md text-sm">
               {success}
             </div>
           )}
@@ -605,19 +615,31 @@ const ViewManagementModal = ({
                   Current Table Filters
                 </label>
                 <div className="border border-gray-300 rounded-md p-3">
-                  {currentTableView?.filters && Object.keys(currentTableView.filters).length > 0 ? (
+                  {currentTableView?.filters &&
+                  Object.keys(currentTableView.filters).length > 0 ? (
                     <div className="space-y-2">
-                      {Object.entries(currentTableView.filters).map(([column, filterValues]) => (
-                        <div key={column} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <span className="text-sm font-medium text-gray-900">{column}</span>
-                          <span className="text-sm text-gray-600">
-                            {Array.isArray(filterValues) ? filterValues.join(", ") : filterValues}
-                          </span>
-                        </div>
-                      ))}
+                      {Object.entries(currentTableView.filters).map(
+                        ([column, filterValues]) => (
+                          <div
+                            key={column}
+                            className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                          >
+                            <span className="text-sm font-medium text-gray-900">
+                              {column}
+                            </span>
+                            <span className="text-sm text-gray-600">
+                              {Array.isArray(filterValues)
+                                ? filterValues.join(", ")
+                                : filterValues}
+                            </span>
+                          </div>
+                        )
+                      )}
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-sm">No filters applied in the table</p>
+                    <p className="text-gray-500 text-sm">
+                      No filters applied in the table
+                    </p>
                   )}
                 </div>
               </div>

@@ -101,7 +101,7 @@ const PerformanceMonitor = ({ isVisible = false, onToggle }) => {
 
         <div className="flex justify-between">
           <span className="text-gray-600">Cache Hits:</span>
-          <span className="font-mono text-green-600">{metrics.cacheHits}</span>
+          <span className="font-mono text-geniusAquamarine">{metrics.cacheHits}</span>
         </div>
 
         <div className="flex justify-between">

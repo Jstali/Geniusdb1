@@ -19,7 +19,7 @@ const getMarkerColor = (headroom) => {
 // Custom marker icon component - using location pin symbol
 const createMarkerIcon = (color, isClicked = false) => {
   const scale = isClicked ? 1.8 : 1.2; // Larger scale when clicked
-  
+
   // Check if google.maps is available
   if (typeof google === "undefined" || !google || !google.maps) {
     // Fallback to location pin SVG path if Google Maps API is not loaded
@@ -64,12 +64,12 @@ const MapSection = ({
   // Get API base URL from environment or default to localhost:8000
   const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
-  console.log("MapSection received props:", { 
-    dataLength: data?.length || 0, 
-    filters, 
+  console.log("MapSection received props:", {
+    dataLength: data?.length || 0,
+    filters,
     activeView,
     selectedColumns: selectedColumns?.length || 0,
-    dataSample: data?.slice(0, 2)
+    dataSample: data?.slice(0, 2),
   });
 
   // Convert frontend filters to backend format
@@ -144,23 +144,37 @@ const MapSection = ({
             "available_power",
             "network_operator",
           ];
-          
+
           let columnsToUse;
           if (selectedColumns && selectedColumns.length > 0) {
             // Add location columns if they're not already included
             const locationColumns = ["latitude", "longitude", "site_name"];
-            columnsToUse = [...new Set([...selectedColumns, ...locationColumns])];
+            columnsToUse = [
+              ...new Set([...selectedColumns, ...locationColumns]),
+            ];
           } else {
             columnsToUse = defaultLocationColumns;
           }
-          
+
           console.log("=== MAP SECTION DEBUG ===");
-          console.log("MapSection: selectedColumns from props:", selectedColumns);
-          console.log("MapSection: selectedColumns length:", selectedColumns?.length || 0);
-          console.log("MapSection: Using columns for saved view map data:", columnsToUse);
-          console.log("MapSection: columnsToUse length:", columnsToUse?.length || 0);
+          console.log(
+            "MapSection: selectedColumns from props:",
+            selectedColumns
+          );
+          console.log(
+            "MapSection: selectedColumns length:",
+            selectedColumns?.length || 0
+          );
+          console.log(
+            "MapSection: Using columns for saved view map data:",
+            columnsToUse
+          );
+          console.log(
+            "MapSection: columnsToUse length:",
+            columnsToUse?.length || 0
+          );
           console.log("=========================");
-          
+
           const payload = {
             filters: backendFilters,
             selected_columns: columnsToUse,
@@ -240,26 +254,35 @@ const MapSection = ({
                 siteName: site["Site Name"] || site.site_name,
                 lat,
                 lng,
-                isValid: !(!lat || !lng || isNaN(lat) || isNaN(lng))
+                isValid: !(!lat || !lng || isNaN(lat) || isNaN(lng)),
               });
 
               // Validate that lat and lng are valid numbers
               if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-                console.log(`Skipping site ${index} - invalid coordinates:`, { lat, lng });
+                console.log(`Skipping site ${index} - invalid coordinates:`, {
+                  lat,
+                  lng,
+                });
                 return null;
               }
 
               return {
                 id: `${site["Site Name"] || site.site_name || "Site"}-${index}`,
                 position: { lat, lng },
-                popupText: site["Site Name"] || site.site_name || "Unknown Site",
+                popupText:
+                  site["Site Name"] || site.site_name || "Unknown Site",
                 siteName: site["Site Name"] || site.site_name || "Unknown Site",
                 siteType: site["Site Type"] || site.site_type || "Unknown",
-                siteVoltage: site["Site Voltage"] || site.site_voltage || "Unknown",
+                siteVoltage:
+                  site["Site Voltage"] || site.site_voltage || "Unknown",
                 county: site["County"] || site.county || "Unknown",
-                generationHeadroom: site["Generation Headroom Mw"] || site.generation_headroom,
-                licenceArea: site["Licence Area"] || site.licence_area || "Unknown",
-                color: getMarkerColor(site["Generation Headroom Mw"] || site.generation_headroom),
+                generationHeadroom:
+                  site["Generation Headroom Mw"] || site.generation_headroom,
+                licenceArea:
+                  site["Licence Area"] || site.licence_area || "Unknown",
+                color: getMarkerColor(
+                  site["Generation Headroom Mw"] || site.generation_headroom
+                ),
                 ...site,
               };
             })
@@ -270,7 +293,10 @@ const MapSection = ({
             transformedMarkers.length,
             "markers"
           );
-          console.log("Sample marker IDs:", transformedMarkers.slice(0, 3).map(m => m.id));
+          console.log(
+            "Sample marker IDs:",
+            transformedMarkers.slice(0, 3).map((m) => m.id)
+          );
           setMarkers(transformedMarkers);
           setLastSuccessfulMarkers(transformedMarkers);
           setDataLoaded(true);
@@ -301,7 +327,12 @@ const MapSection = ({
 
   // Fallback mechanism: if markers are empty but we have successful markers, restore them
   useEffect(() => {
-    if (markers.length === 0 && lastSuccessfulMarkers.length > 0 && !loading && dataLoaded) {
+    if (
+      markers.length === 0 &&
+      lastSuccessfulMarkers.length > 0 &&
+      !loading &&
+      dataLoaded
+    ) {
       console.log("MapSection: Restoring markers from last successful state");
       setMarkers(lastSuccessfulMarkers);
     }
@@ -342,7 +373,7 @@ const MapSection = ({
           activeView={activeView}
           markers={markers}
         />
-        
+
         {/* Info Button with Hover Popup */}
         <div className="absolute top-4 right-4 z-10">
           <div className="relative group">
@@ -353,15 +384,19 @@ const MapSection = ({
             >
               <span className="text-sm font-bold">i</span>
             </button>
-            
+
             {/* Hover Popup */}
             <div className="absolute top-10 right-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
               <div className="p-4">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">Pin Color Legend</h3>
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                  Pin Color Legend
+                </h3>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0"></div>
-                    <span className="text-gray-700">Green - 50MW Generation Headroom and greater</span>
+                    <div className="w-4 h-4 rounded-full bg-geniusAquamarine flex-shrink-0"></div>
+                    <span className="text-gray-700">
+                      Green - 50MW Generation Headroom and greater
+                    </span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 rounded-full bg-orange-500 flex-shrink-0"></div>

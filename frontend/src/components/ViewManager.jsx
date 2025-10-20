@@ -375,7 +375,7 @@ const ViewManager = ({
           )}
 
           {success && (
-            <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-md text-sm">
+            <div className="mb-4 p-3 bg-geniusAquamarine/10 text-geniusAquamarine rounded-md text-sm">
               {success}
             </div>
           )}
@@ -726,7 +726,7 @@ const ViewManager = ({
                 className={`flex-1 px-4 py-2 rounded-md text-sm font-medium ${
                   loading
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-geniusAquamarine text-black hover:bg-geniusAquamarine/80"
                 }`}
               >
                 Save View

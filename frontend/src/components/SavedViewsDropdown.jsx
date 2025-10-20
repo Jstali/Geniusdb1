@@ -132,7 +132,7 @@ const SavedViewsDropdown = ({ onLoadView }) => {
     // Create notification element
     const notification = document.createElement("div");
     notification.className =
-      "fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50";
+      "fixed top-4 right-4 bg-geniusAquamarine text-black px-4 py-2 rounded-lg shadow-lg z-50";
     notification.textContent = message;
 
     // Add to document

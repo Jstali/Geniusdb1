@@ -57,6 +57,11 @@ const Dashboard = () => {
   }, []);
 
   const handleLogout = () => {
+    try {
+      localStorage.removeItem("isLoggedIn");
+    } catch (e) {
+      console.warn("Unable to clear login state", e);
+    }
     navigate("/login");
   };
 
@@ -89,8 +94,14 @@ const Dashboard = () => {
       console.log("Enhanced table view config updated:", newTableViewConfig);
       console.log("Selected columns:", newTableViewConfig.selectedColumns);
       console.log("Filters:", newTableViewConfig.filters);
-      console.log("Sort config:", { sortBy: newTableViewConfig.sortBy, sortDirection: newTableViewConfig.sortDirection });
-      console.log("Pagination config:", { pageSize: newTableViewConfig.pageSize, currentPage: newTableViewConfig.currentPage });
+      console.log("Sort config:", {
+        sortBy: newTableViewConfig.sortBy,
+        sortDirection: newTableViewConfig.sortDirection,
+      });
+      console.log("Pagination config:", {
+        pageSize: newTableViewConfig.pageSize,
+        currentPage: newTableViewConfig.currentPage,
+      });
       setTableViewConfig(newTableViewConfig);
     }
 
@@ -129,17 +140,22 @@ const Dashboard = () => {
         console.log("=== Dashboard: Rendering MapView ===");
         console.log("activeView:", tableViewConfig?.activeView);
         console.log("tableViewConfig:", tableViewConfig);
-        console.log("selectedColumns being passed:", tableViewConfig?.selectedColumns || []);
-        return <MapView 
-          activeView={tableViewConfig?.activeView || null} 
-          selectedColumns={tableViewConfig?.selectedColumns || []} 
-        />; // Pass active view and selected columns to MapView
+        console.log(
+          "selectedColumns being passed:",
+          tableViewConfig?.selectedColumns || []
+        );
+        return (
+          <MapView
+            activeView={tableViewConfig?.activeView || null}
+            selectedColumns={tableViewConfig?.selectedColumns || []}
+          />
+        ); // Pass active view and selected columns to MapView
       case "Table View":
         return <TableView />;
       case "Chart Generator":
         return (
           <div className="p-6">
-            <ChartGeneratorDemo 
+            <ChartGeneratorDemo
               selectedColumns={tableViewConfig?.selectedColumns || []}
               filters={tableViewConfig?.filters || {}}
               generatedChart={generatedChart}
@@ -184,7 +200,10 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{backgroundColor: '#F6F2F4'}}>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: "#F6F2F4" }}
+    >
       <Header
         active={activeTab}
         onNavigate={handleNavigate}
@@ -221,7 +240,7 @@ const Dashboard = () => {
             : ""
         }
       />
-      
+
       {/* View Management Modal */}
       <ViewManagementModal
         isOpen={isViewManagerOpen}

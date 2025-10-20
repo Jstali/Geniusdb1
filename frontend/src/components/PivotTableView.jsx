@@ -120,15 +120,21 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
       externalPivotConfig: externalPivotConfig,
       internalPivotConfig: pivotConfig,
       dataLength: data?.length || 0,
-      isGenerated: effectiveIsGenerated
+      isGenerated: effectiveIsGenerated,
     });
-    
+
     if (effectivePivotConfig && data && data.length > 0) {
-      console.log("useEffect: Generating pivot data with config:", effectivePivotConfig);
+      console.log(
+        "useEffect: Generating pivot data with config:",
+        effectivePivotConfig
+      );
       try {
         const newPivotData = generatePivotData(data, effectivePivotConfig);
         setGeneratedPivotData(newPivotData);
-        console.log("useEffect: Pivot data generated successfully, rows:", newPivotData.length);
+        console.log(
+          "useEffect: Pivot data generated successfully, rows:",
+          newPivotData.length
+        );
       } catch (error) {
         console.error("useEffect: Error generating pivot data:", error);
         setGeneratedPivotData([]);
@@ -206,7 +212,10 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
         result.push(row);
       });
 
-      console.log("Pivot data generation completed. Rows generated:", result.length);
+      console.log(
+        "Pivot data generation completed. Rows generated:",
+        result.length
+      );
       return result;
     } catch (error) {
       console.error("Error generating pivot data:", error);
@@ -218,7 +227,7 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
   const pivotData = useMemo(() => {
     console.log("Generating pivot data with config:", pivotConfig);
     console.log("Data length:", data?.length || 0);
-    
+
     // Only generate data when configuration is provided
     if (
       !data ||
@@ -286,7 +295,10 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
         result.push(row);
       });
 
-      console.log("Pivot data generation completed. Rows generated:", result.length);
+      console.log(
+        "Pivot data generation completed. Rows generated:",
+        result.length
+      );
       return result;
     } catch (error) {
       console.error("Error generating pivot data:", error);
@@ -399,13 +411,13 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
   const handleDataGenerate = (config) => {
     console.log("=== PIVOT TABLE VIEW: RECEIVED CONFIG ===");
     console.log("Received pivot configuration:", config);
-    
+
     // Validate the config before proceeding
     if (!config || !config.rows || !config.columns || !config.values) {
       console.error("Invalid configuration received:", config);
       return;
     }
-    
+
     console.log("Setting pivot config and marking as generated");
     setPivotConfig(config);
     setIsGenerated(true);
@@ -441,7 +453,7 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
           </button>
           <button
             onClick={exportToExcel}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm"
+            className="px-4 py-2 bg-geniusAquamarine text-black rounded hover:bg-geniusAquamarine/80 transition-colors text-sm"
           >
             Export to Excel
           </button>
@@ -459,14 +471,17 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
       )}
 
       {/* Message when no data available after generation */}
-      {data && data.length > 0 && effectiveIsGenerated && generatedPivotData.length === 0 && (
-        <div className="p-8 text-center text-gray-500">
-          <p>
-            No data available for the selected options. Please try different
-            selections.
-          </p>
-        </div>
-      )}
+      {data &&
+        data.length > 0 &&
+        effectiveIsGenerated &&
+        generatedPivotData.length === 0 && (
+          <div className="p-8 text-center text-gray-500">
+            <p>
+              No data available for the selected options. Please try different
+              selections.
+            </p>
+          </div>
+        )}
 
       {/* Handsontable component - only show when there's data to display */}
       {effectiveIsGenerated && generatedPivotData.length > 0 && (

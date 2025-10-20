@@ -24,15 +24,15 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
         rows: [],
         columnsFields: [],
         values: [],
-        aggregations: []
+        aggregations: [],
       };
     }
-    
+
     return {
       rows: columnOptions.length > 0 ? [columnOptions[0].value] : [],
       columnsFields: columnOptions.length > 1 ? [columnOptions[1].value] : [],
       values: columnOptions.length > 2 ? [columnOptions[2].value] : [],
-      aggregations: columnOptions.length > 2 ? ["SUM"] : []
+      aggregations: columnOptions.length > 2 ? ["SUM"] : [],
     };
   };
   const [error, setError] = useState("");
@@ -46,7 +46,12 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
 
   // Only initialize state once when component mounts and columns are available
   useEffect(() => {
-    if (columnOptions.length > 0 && rows.length === 0 && columnsFields.length === 0 && values.length === 0) {
+    if (
+      columnOptions.length > 0 &&
+      rows.length === 0 &&
+      columnsFields.length === 0 &&
+      values.length === 0
+    ) {
       console.log("Initializing pivot form with default values");
       const defaultState = getDefaultState();
       setRows(defaultState.rows);
@@ -132,24 +137,28 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
       rows: rows,
       columnsFields: columnsFields,
       values: values,
-      aggregations: aggregations
+      aggregations: aggregations,
     });
 
     // Clear any previous errors
     setError("");
 
     // If no selections made, try to initialize with defaults
-    if (rows.length === 0 && columnsFields.length === 0 && values.length === 0) {
+    if (
+      rows.length === 0 &&
+      columnsFields.length === 0 &&
+      values.length === 0
+    ) {
       console.log("No selections made, initializing with defaults");
       if (columnOptions.length > 0) {
         const defaultState = getDefaultState();
-        
+
         // Update state for UI consistency
         setRows(defaultState.rows);
         setColumnsFields(defaultState.columnsFields);
         setValues(defaultState.values);
         setAggregations(defaultState.aggregations);
-        
+
         // Use the default values for generation (don't wait for state updates)
         const config = {
           rows: defaultState.rows,
@@ -159,7 +168,7 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
             aggregation: defaultState.aggregations[index] || "SUM",
           })),
         };
-        
+
         console.log("Using default configuration:", config);
         onDataGenerate(config);
         setSuccessMessage("Pivot table generated with default settings!");
@@ -228,7 +237,7 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
     // Validate that all fields exist in the data
     console.log("Sending configuration to parent component");
     onDataGenerate(config);
-    
+
     // Show success message after successful generation
     console.log("Pivot table generated successfully");
     setSuccessMessage("Pivot table generated successfully!");
@@ -253,14 +262,15 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
       )}
 
       {successMessage && (
-        <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-md border border-green-200">
+        <div className="mb-4 p-3 bg-geniusAquamarine/10 text-geniusAquamarine rounded-md border border-geniusAquamarine/50">
           {successMessage}
         </div>
       )}
 
       {/* Debug information */}
       <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md border border-blue-200 text-sm">
-        <strong>Debug Info:</strong> Rows: {rows.length}, Columns: {columnsFields.length}, Values: {values.length}
+        <strong>Debug Info:</strong> Rows: {rows.length}, Columns:{" "}
+        {columnsFields.length}, Values: {values.length}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -361,7 +371,7 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
                   <select
                     value={value}
                     onChange={(e) => handleValueChange(index, e.target.value)}
-                    className="flex-1 mr-2 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    className="flex-1 mr-2 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md text-[#222]"
                   >
                     {columnOptions.map((option) => (
                       <option
@@ -378,7 +388,7 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
                     onChange={(e) =>
                       handleAggregationChange(index, e.target.value)
                     }
-                    className="flex-1 mr-2 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    className="flex-1 mr-2 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md text-[#222]"
                   >
                     {aggregationOptions.map((option) => (
                       <option key={`agg-${option}`} value={option}>

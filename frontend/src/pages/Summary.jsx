@@ -152,9 +152,9 @@ const Summary = () => {
             {/* Average Headroom */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex items-center">
-                <div className="p-3 rounded-full bg-green-100">
+                <div className="p-3 rounded-full bg-geniusAquamarine/20">
                   <svg
-                    className="h-6 w-6 text-green-600"
+                    className="h-6 w-6 text-geniusAquamarine"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -181,8 +181,8 @@ const Summary = () => {
             {/* Green Sites */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex items-center">
-                <div className="p-3 rounded-full bg-green-100">
-                  <div className="h-6 w-6 bg-green-600 rounded-full"></div>
+                <div className="p-3 rounded-full bg-geniusAquamarine/20">
+                  <div className="h-6 w-6 bg-geniusAquamarine rounded-full"></div>
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">

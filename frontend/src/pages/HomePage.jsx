@@ -254,7 +254,7 @@ const HomePage = ({
   console.log("HomePage activeData:", activeData);
 
   return (
-    <div className="flex flex-col h-full pt-4 transition-all duration-300">
+    <div className="flex flex-col h-full pt-1 transition-all duration-300">
       {/* Top section with map and panels */}
       <div className="flex gap-4 h-[600px] mb-6 transition-all duration-300 flex-layout">
         {/* Left panel - Filters */}

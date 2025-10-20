@@ -128,7 +128,7 @@ const SimpleMarkers = ({ markers, onMarkerClick }) => {
                   <span
                     className={
                       marker.generationHeadroom >= 50
-                        ? "text-green-600"
+                        ? "text-geniusAquamarine"
                         : marker.generationHeadroom >= 0
                         ? "text-orange-500"
                         : marker.generationHeadroom >= -50

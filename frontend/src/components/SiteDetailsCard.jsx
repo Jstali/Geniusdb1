@@ -88,10 +88,11 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
 
   // Helper function to calculate risk level based on Generation Headroom
   const calculateRiskLevel = (headroom) => {
-    if (headroom === null || headroom === undefined) return { label: "Unknown", color: "gray" };
+    if (headroom === null || headroom === undefined)
+      return { label: "Unknown", color: "gray" };
     const value = parseFloat(headroom);
     if (isNaN(value)) return { label: "Unknown", color: "gray" };
-    
+
     if (value >= 50) return { label: "Low (Green)", color: "green" };
     if (value >= 20) return { label: "Medium (Amber)", color: "amber" };
     return { label: "High (Red)", color: "red" };
@@ -101,7 +102,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
   const siteName =
     getPropertyValue(selectedSite, "site_name", "siteName", "Site Name") ||
     "Unknown Site";
-  
+
   const bsp =
     getPropertyValue(
       selectedSite,
@@ -109,7 +110,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
       "bulk_supply_point",
       "bulkSupplyPoint"
     ) || "Not Available";
-  
+
   const gsp =
     getPropertyValue(
       selectedSite,
@@ -119,7 +120,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
       "Associatedgsp",
       "associatedgsp"
     ) || "Not Available";
-  
+
   const firmCapacity = getPropertyValue(
     selectedSite,
     "Firm Capacity",
@@ -127,7 +128,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
     "firm_capacity",
     "firmCapacity"
   );
-  
+
   const genCapacity = getPropertyValue(
     selectedSite,
     "Generation Capacity",
@@ -135,7 +136,7 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
     "generation_capacity",
     "generationCapacity"
   );
-  
+
   const spareCapacity = getPropertyValue(
     selectedSite,
     "Spare Summer",
@@ -143,14 +144,14 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
     "spare_summer",
     "spareCapacity"
   );
-  
+
   const generationHeadroom = getPropertyValue(
     selectedSite,
     "Generation Headroom Mw",
     "generation_headroom",
     "generationHeadroom"
   );
-  
+
   const riskLevel = calculateRiskLevel(generationHeadroom);
 
   return (
@@ -168,31 +169,42 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
       <div className="space-y-4">
         {/* Site Name as Heading */}
         <div>
-          <h4 className="text-xl font-semibold text-gray-800 mb-4">{siteName}</h4>
-          
+          <h4 className="text-xl font-semibold text-gray-800 mb-4">
+            {siteName}
+          </h4>
+
           <div className="space-y-3">
             {/* Risk Level */}
             <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
               <span className="text-gray-600 font-medium">Risk Level:</span>
-              <span className={`font-semibold ${
-                riskLevel.color === "green" ? "text-green-600" :
-                riskLevel.color === "amber" ? "text-amber-600" :
-                riskLevel.color === "red" ? "text-red-600" :
-                "text-gray-600"
-              }`}>
+              <span
+                className={`font-semibold ${
+                  riskLevel.color === "green"
+                    ? "text-geniusAquamarine"
+                    : riskLevel.color === "amber"
+                    ? "text-amber-600"
+                    : riskLevel.color === "red"
+                    ? "text-red-600"
+                    : "text-gray-600"
+                }`}
+              >
                 {riskLevel.label}
               </span>
             </div>
 
             {/* BSP (Bulk Supply Point) */}
             <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600 font-medium">Bulk Supply Point:</span>
+              <span className="text-gray-600 font-medium">
+                Bulk Supply Point:
+              </span>
               <span className="font-medium text-gray-800">{bsp}</span>
             </div>
 
             {/* GSP (Grid Supply Point) */}
             <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600 font-medium">Grid Supply Point:</span>
+              <span className="text-gray-600 font-medium">
+                Grid Supply Point:
+              </span>
               <span className="font-medium text-gray-800">{gsp}</span>
             </div>
 
@@ -208,7 +220,9 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
 
             {/* Gen Capacity (Generation Capacity) */}
             <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
-              <span className="text-gray-600 font-medium">Generative Capacity:</span>
+              <span className="text-gray-600 font-medium">
+                Generative Capacity:
+              </span>
               <span className="font-medium text-gray-800">
                 {genCapacity !== null && genCapacity !== undefined
                   ? `${parseFloat(genCapacity).toFixed(2)} MW`

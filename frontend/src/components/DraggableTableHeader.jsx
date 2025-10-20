@@ -306,7 +306,7 @@ const DraggableTableHeader = ({
         items={columnOrder} 
         strategy={horizontalListSortingStrategy}
       >
-        <thead className="shadow-md sticky top-0 z-10" style={{background: 'linear-gradient(135deg, #8DE971 0%, #7AC75E 100%)', boxShadow: '0 2px 6px rgba(141, 233, 113, 0.3)'}}>
+        <thead className="shadow-md sticky top-0 z-10" style={{background: '#2A1E5C', boxShadow: '0 2px 6px rgba(42, 30, 92, 0.3)'}}>
           <tr>
             {orderedHeaders.map((header) => {
               const columnId = header.column.columnDef.accessorKey;

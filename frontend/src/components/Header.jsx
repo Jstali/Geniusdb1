@@ -27,11 +27,12 @@ const Header = ({
             {/* Left Corner: Logo */}
             <div className="flex items-center space-x-3">
               <img
-                src="/geniusdb logo.png"
+                src="/genius-removebg-preview.png"
                 alt="GeniusDB Logo"
-                className="h-34 w-44"
+                className="h-12 w-auto object-contain"
                 style={{
                   filter: "drop-shadow(2px 2px 4px rgba(3, 3, 4, 0.3))",
+                  maxHeight: "48px",
                 }}
               />
               <h1 className="text-3xl font-black">

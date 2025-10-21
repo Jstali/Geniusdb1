@@ -69,7 +69,7 @@ const Login = () => {
         <div className="hidden md:flex md:w-1/2 flex-col items-center justify-center pr-12">
           <div className="text-center">
             <img
-              src="/geniusdb logo.png"
+              src="/genius-removebg-preview.png"
               alt="GeniusDB - Intelligent Grid Data"
               className="w-96 h-auto mx-auto object-contain"
               style={{ width: "400px", height: "auto" }}
@@ -84,7 +84,7 @@ const Login = () => {
               {/* Mobile Logo - Only visible on small screens */}
               <div className="md:hidden text-center  mb-8">
                 <img
-                  src="/geniusdb logo.png"
+                  src="/genius-removebg-preview.png"
                   alt="GeniusDB - Intelligent Grid Data"
                   className="w-80 h-auto mx-auto object-contain"
                   style={{ width: "320px", height: "auto" }}

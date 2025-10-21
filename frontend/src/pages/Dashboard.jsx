@@ -64,11 +64,21 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     try {
+      // Clear all authentication-related data
       localStorage.removeItem("isLoggedIn");
+      localStorage.clear(); // Clear all localStorage data
+      
+      // Force navigation to login page
+      navigate("/login", { replace: true });
+      
+      // Force a page refresh to ensure clean state
+      window.location.href = "/login";
     } catch (e) {
       console.warn("Unable to clear login state", e);
+      // Fallback: force navigation even if localStorage fails
+      navigate("/login", { replace: true });
+      window.location.href = "/login";
     }
-    navigate("/login");
   };
 
   const handleNavigate = (tab) => {

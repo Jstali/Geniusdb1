@@ -39,6 +39,7 @@ const DynamicChartGenerator = ({
   onLoadView = null,
   selectedColumns = [], // Add selectedColumns prop for saved view columns
   filters = {}, // Add filters prop for filtered data
+  chartConfig = null, // Add chartConfig prop for saved chart configuration
   generatedChart = null, // External chart state for persistence
   setGeneratedChart = null, // External chart state setter
 }) => {
@@ -50,6 +51,9 @@ const DynamicChartGenerator = ({
 
   // View management state
   const [savedViews, setSavedViews] = useState([]);
+
+  // Debug: Log received chartConfig
+  console.log("DynamicChartGenerator: Received chartConfig:", chartConfig);
 
   // Modern gradient color palette for professional appearance
   const colorPalette = {
@@ -183,19 +187,35 @@ const DynamicChartGenerator = ({
 
     // If selectedColumns are provided (from saved view), use only those columns
     if (selectedColumns && selectedColumns.length > 0) {
-      columnsToUse = selectedColumns;
+      columnsToUse = [...selectedColumns];
     } else {
       // Otherwise, use all available columns
       columnsToUse = Object.keys(firstRow);
     }
 
-    return columnsToUse.map((key) => ({
+    // Always include saved chart configuration columns to ensure they're available
+    if (chartConfig) {
+      if (chartConfig.xAxis && !columnsToUse.includes(chartConfig.xAxis)) {
+        columnsToUse.push(chartConfig.xAxis);
+      }
+      if (chartConfig.yAxis && !columnsToUse.includes(chartConfig.yAxis)) {
+        columnsToUse.push(chartConfig.yAxis);
+      }
+    }
+
+    const result = columnsToUse.map((key) => ({
       name: key,
       displayName:
         key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
       isNumeric: isNumericColumn(key),
     }));
-  }, [filteredData, selectedColumns]);
+    
+    console.log("DynamicChartGenerator: Available columns:", result);
+    console.log("DynamicChartGenerator: Selected columns from saved view:", selectedColumns);
+    console.log("DynamicChartGenerator: Chart config:", chartConfig);
+    
+    return result;
+  }, [filteredData, selectedColumns, chartConfig]);
 
   // Filter columns for X-axis (all columns except selected Y-axis)
   const xAxisOptions = useMemo(() => {
@@ -236,19 +256,29 @@ const DynamicChartGenerator = ({
     return null;
   };
 
-  // Process data for chart generation
-  const processChartData = () => {
+  // Process data for chart generation with specific config values
+  const processChartDataWithConfig = (chartTypeParam, xAxisParam, yAxisParam) => {
+    console.log("DynamicChartGenerator: processChartDataWithConfig called with:", {
+      chartTypeParam,
+      xAxisParam,
+      yAxisParam,
+      filteredDataLength: filteredData?.length || 0
+    });
+    
     if (!filteredData || filteredData.length === 0) {
+      console.log("DynamicChartGenerator: No filtered data available");
       setError("No data available for chart generation");
       return null;
     }
 
-    if (!xAxisColumn) {
+    if (!xAxisParam) {
+      console.log("DynamicChartGenerator: No X-axis column provided");
       setError("Please select an X-axis column");
       return null;
     }
 
-    if (chartType !== "pie" && !yAxisColumn) {
+    if (chartTypeParam !== "pie" && !yAxisParam) {
+      console.log("DynamicChartGenerator: No Y-axis column provided for non-pie chart");
       setError("Please select a Y-axis column for non-pie charts");
       return null;
     }
@@ -258,11 +288,11 @@ const DynamicChartGenerator = ({
     try {
       let processedData = [];
 
-      if (chartType === "pie") {
+      if (chartTypeParam === "pie") {
         // For pie charts, aggregate data by X-axis column
         const aggregatedData = {};
         filteredData.forEach((row) => {
-          const category = row[xAxisColumn];
+          const category = row[xAxisParam];
           if (category !== null && category !== undefined && category !== "") {
             aggregatedData[category] = (aggregatedData[category] || 0) + 1;
           }
@@ -307,19 +337,19 @@ const DynamicChartGenerator = ({
         processedData = filteredData
           .filter(
             (row) =>
-              row[xAxisColumn] !== null &&
-              row[xAxisColumn] !== undefined &&
-              row[xAxisColumn] !== "" &&
-              row[yAxisColumn] !== null &&
-              row[yAxisColumn] !== undefined &&
-              row[yAxisColumn] !== ""
+              row[xAxisParam] !== null &&
+              row[xAxisParam] !== undefined &&
+              row[xAxisParam] !== "" &&
+              row[yAxisParam] !== null &&
+              row[yAxisParam] !== undefined &&
+              row[yAxisParam] !== ""
           )
           .map((row) => {
-            const yValue = Number(row[yAxisColumn]);
+            const yValue = Number(row[yAxisParam]);
             return {
-              name: String(row[xAxisColumn]),
+              name: String(row[xAxisParam]),
               value: isNaN(yValue) ? 0 : yValue,
-              [yAxisColumn]: isNaN(yValue) ? 0 : yValue,
+              [yAxisParam]: isNaN(yValue) ? 0 : yValue,
             };
           })
           .filter((item) => item.value > 0); // Filter out zero values for better visualization
@@ -330,23 +360,70 @@ const DynamicChartGenerator = ({
         }
       }
 
+      console.log("DynamicChartGenerator: Processed data for chart:", processedData);
       return processedData;
     } catch (err) {
+      console.error("DynamicChartGenerator: Error processing chart data:", err);
       setError("Error processing chart data: " + err.message);
       return null;
     }
   };
 
+  // Process data for chart generation
+  const processChartData = () => {
+    console.log("DynamicChartGenerator: processChartData called");
+    console.log("DynamicChartGenerator: filteredData length:", filteredData?.length || 0);
+    console.log("DynamicChartGenerator: xAxisColumn:", xAxisColumn);
+    console.log("DynamicChartGenerator: yAxisColumn:", yAxisColumn);
+    console.log("DynamicChartGenerator: chartType:", chartType);
+    
+    if (!filteredData || filteredData.length === 0) {
+      console.log("DynamicChartGenerator: No filtered data available");
+      setError("No data available for chart generation");
+      return null;
+    }
+
+    if (!xAxisColumn) {
+      console.log("DynamicChartGenerator: No X-axis column selected");
+      setError("Please select an X-axis column");
+      return null;
+    }
+
+    if (chartType !== "pie" && !yAxisColumn) {
+      console.log("DynamicChartGenerator: No Y-axis column selected for non-pie chart");
+      setError("Please select a Y-axis column for non-pie charts");
+      return null;
+    }
+
+    setError("");
+
+    return processChartDataWithConfig(chartType, xAxisColumn, yAxisColumn);
+  };
+
   // Generate chart when button is clicked
   const handleGenerateChart = () => {
+    console.log("DynamicChartGenerator: Generate Chart button clicked");
+    console.log("DynamicChartGenerator: Current state:", {
+      chartType,
+      xAxisColumn,
+      yAxisColumn,
+      filteredDataLength: filteredData?.length || 0
+    });
+    
     const chartData = processChartData();
+    console.log("DynamicChartGenerator: Processed chart data:", chartData);
+    
     if (chartData && setGeneratedChart) {
-      setGeneratedChart({
+      const chartConfig = {
         type: chartType,
         data: chartData,
         xAxis: xAxisColumn,
         yAxis: yAxisColumn,
-      });
+      };
+      console.log("DynamicChartGenerator: Setting generated chart:", chartConfig);
+      setGeneratedChart(chartConfig);
+    } else {
+      console.log("DynamicChartGenerator: No chart data generated or setGeneratedChart not available");
     }
   };
 
@@ -366,6 +443,51 @@ const DynamicChartGenerator = ({
       setYAxisColumn(currentChartView.yAxis || "");
     }
   }, [currentChartView]);
+
+  // Load chart configuration from saved view
+  useEffect(() => {
+    if (chartConfig) {
+      console.log("DynamicChartGenerator: Loading chart config from saved view:", chartConfig);
+      console.log("DynamicChartGenerator: Setting chartType to:", chartConfig.type || "bar");
+      console.log("DynamicChartGenerator: Setting xAxisColumn to:", chartConfig.xAxis || "");
+      console.log("DynamicChartGenerator: Setting yAxisColumn to:", chartConfig.yAxis || "");
+      
+      setChartType(chartConfig.type || "bar");
+      setXAxisColumn(chartConfig.xAxis || "");
+      setYAxisColumn(chartConfig.yAxis || "");
+      
+      // Auto-generate chart if we have both X and Y axes (or just X for pie charts)
+      if (chartConfig.xAxis && (chartConfig.yAxis || chartConfig.type === "pie")) {
+        console.log("DynamicChartGenerator: Auto-generating chart with saved configuration");
+        // Use setTimeout to ensure state updates are applied first
+        setTimeout(() => {
+          console.log("DynamicChartGenerator: Auto-generating with state:", {
+            chartType: chartConfig.type || "bar",
+            xAxisColumn: chartConfig.xAxis || "",
+            yAxisColumn: chartConfig.yAxis || ""
+          });
+          
+          // Generate chart directly with the config values
+          const chartData = processChartDataWithConfig(
+            chartConfig.type || "bar",
+            chartConfig.xAxis || "",
+            chartConfig.yAxis || ""
+          );
+          
+          if (chartData && setGeneratedChart) {
+            const chartConfigToSet = {
+              type: chartConfig.type || "bar",
+              data: chartData,
+              xAxis: chartConfig.xAxis || "",
+              yAxis: chartConfig.yAxis || "",
+            };
+            console.log("DynamicChartGenerator: Auto-setting generated chart:", chartConfigToSet);
+            setGeneratedChart(chartConfigToSet);
+          }
+        }, 100);
+      }
+    }
+  }, [chartConfig]);
 
   // Fetch saved views on component mount
   useEffect(() => {
@@ -1027,6 +1149,7 @@ const DynamicChartGenerator = ({
             transition={{ duration: 0.3 }}
             className="bg-white p-6 shadow-lg rounded-2xl border border-gray-200"
           >
+            {console.log("DynamicChartGenerator: Rendering chart:", generatedChart)}
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-2">

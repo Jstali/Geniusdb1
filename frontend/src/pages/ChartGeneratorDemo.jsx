@@ -3,7 +3,7 @@ import DynamicChartGenerator from "../components/DynamicChartGenerator";
 
 const API_BASE = (window._env_ && window._env_.API_BASE) || "";
 
-const ChartGeneratorDemo = ({ selectedColumns = [], filters = {}, generatedChart = null, setGeneratedChart = null }) => {
+const ChartGeneratorDemo = ({ selectedColumns = [], filters = {}, chartConfig = null, generatedChart = null, setGeneratedChart = null }) => {
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -81,6 +81,7 @@ const ChartGeneratorDemo = ({ selectedColumns = [], filters = {}, generatedChart
         tableData={tableData}
         selectedColumns={selectedColumns}
         filters={filters}
+        chartConfig={chartConfig}
         generatedChart={generatedChart}
         setGeneratedChart={setGeneratedChart}
         onLoadView={(view) => {

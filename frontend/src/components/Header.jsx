@@ -35,8 +35,8 @@ const Header = ({
                 }}
               />
               <h1 className="text-3xl font-black">
-                <span style={{ color: "#B0DB43" }}>GENIUS</span>
-                <span style={{ color: "#DB2763" }}>DB</span>
+                <span style={{ color: "#FFC857" }}>GENIUS</span>
+                <span style={{ color: "#297373" }}>DB</span>
               </h1>
             </div>
 
@@ -48,22 +48,22 @@ const Header = ({
                   onClick={() => onNavigate(item)}
                   className={`font-medium text-sm uppercase tracking-wide transition-all duration-300 ${
                     active === item
-                      ? "text-white px-4 py-2 rounded-md shadow-md hover:shadow-lg transform hover:scale-105"
-                      : "px-3 py-2 rounded-md hover:transform hover:scale-105"
+                      ? "text-black px-4 py-2 rounded-md shadow-md hover:shadow-lg transform hover:scale-105"
+                      : "text-black px-3 py-2 rounded-md hover:transform hover:scale-105"
                   }`}
                   style={{
                     backgroundColor:
-                      active === item ? "#8DE971" : "transparent",
-                    color: active === item ? "white" : "#030304",
+                      active === item ? "#AD96DC" : "transparent",
+                    color: "#030304",
                     boxShadow:
                       active === item
-                        ? "0 4px 12px rgba(141, 233, 113, 0.3)"
+                        ? "0 4px 12px rgba(173, 150, 220, 0.3)"
                         : "none",
                   }}
                   onMouseEnter={(e) => {
                     if (active !== item) {
                       e.target.style.backgroundColor = "#AD96DC";
-                      e.target.style.color = "white";
+                      e.target.style.color = "#030304";
                       e.target.style.boxShadow =
                         "0 4px 12px rgba(173, 150, 220, 0.3)";
                     }

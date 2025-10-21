@@ -85,6 +85,13 @@ const SavedViewsDropdown = ({ onLoadView }) => {
               xAxis: "",
               yAxis: "",
             },
+        mapView: data.map_config
+          ? JSON.parse(data.map_config)
+          : {
+              locationColumn: "Site Name",
+              showMarkers: true,
+              markerFilter: [],
+            },
         viewName: view.name || `View ${view.slot}`, // Add view name to config
       };
 
@@ -132,17 +139,29 @@ const SavedViewsDropdown = ({ onLoadView }) => {
     // Create notification element
     const notification = document.createElement("div");
     notification.className =
-      "fixed top-4 right-4 bg-geniusAquamarine text-black px-4 py-2 rounded-lg shadow-lg z-50";
+      "fixed top-20 right-4 bg-white text-gray-800 px-6 py-3 rounded-lg shadow-xl border-2 border-green-500 z-[9999] font-medium";
     notification.textContent = message;
 
     // Add to document
     document.body.appendChild(notification);
 
+    // Add animation
+    notification.style.transform = "translateX(100%)";
+    notification.style.transition = "transform 0.3s ease-in-out";
+    
+    // Trigger animation
+    setTimeout(() => {
+      notification.style.transform = "translateX(0)";
+    }, 10);
+
     // Remove after 3 seconds
     setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
+      notification.style.transform = "translateX(100%)";
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
     }, 3000);
   };
 

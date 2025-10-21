@@ -1102,14 +1102,14 @@ const DataTable = ({
             onClick={exportToCSV}
             className="px-3 py-2 text-sm font-medium text-white rounded-md transition-all duration-300 transform hover:scale-105 focus:outline-none"
             style={{
-              backgroundColor: '#8DE971',
-              boxShadow: '0 4px 12px rgba(141, 233, 113, 0.3)'
+              backgroundColor: '#AD96DC',
+              boxShadow: '0 4px 12px rgba(173, 150, 220, 0.3)'
             }}
             onMouseEnter={(e) => {
-              e.target.style.boxShadow = '0 6px 20px rgba(141, 233, 113, 0.4)';
+              e.target.style.boxShadow = '0 6px 20px rgba(173, 150, 220, 0.4)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.boxShadow = '0 4px 12px rgba(141, 233, 113, 0.3)';
+              e.target.style.boxShadow = '0 4px 12px rgba(173, 150, 220, 0.3)';
             }}
           >
             <svg
@@ -1450,7 +1450,7 @@ const DataTable = ({
                 >
                   ‹
                 </button>
-                <span className="relative inline-flex items-center px-4 py-2 border text-sm font-medium" style={{backgroundColor: '#8DE971', borderColor: '#8DE971', color: 'white'}}>
+                <span className="relative inline-flex items-center px-4 py-2 border text-sm font-medium" style={{backgroundColor: '#F6F2F4', borderColor: '#AD96DC', color: '#030304'}}>
                   Page {table.getState().pagination.pageIndex + 1} of{" "}
                   {table.getPageCount()}
                 </span>

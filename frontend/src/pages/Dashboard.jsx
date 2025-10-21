@@ -28,6 +28,12 @@ const Dashboard = () => {
     yAxis: "",
   });
 
+  const [mapViewConfig, setMapViewConfig] = useState({
+    locationColumn: "Site Name",
+    showMarkers: true,
+    markerFilter: [],
+  });
+
   // Chart state for persistence across page navigation
   const [generatedChart, setGeneratedChart] = useState(null);
 
@@ -113,8 +119,8 @@ const Dashboard = () => {
 
     // Update map view configuration (if provided)
     if (viewConfig.mapView) {
+      setMapViewConfig(viewConfig.mapView);
       console.log("Map view config updated:", viewConfig.mapView);
-      // Map view configuration will be handled by the map components
     }
 
     console.log("=== Dashboard: handleViewLoad completed ===");
@@ -127,6 +133,7 @@ const Dashboard = () => {
           <HomePage
             tableViewConfig={{
               ...tableViewConfig,
+              mapConfig: mapViewConfig, // Pass map configuration
               // activeView is already in tableViewConfig
             }}
             setTableViewConfig={setTableViewConfig}
@@ -158,6 +165,7 @@ const Dashboard = () => {
             <ChartGeneratorDemo
               selectedColumns={tableViewConfig?.selectedColumns || []}
               filters={tableViewConfig?.filters || {}}
+              chartConfig={chartViewConfig}
               generatedChart={generatedChart}
               setGeneratedChart={setGeneratedChart}
             />

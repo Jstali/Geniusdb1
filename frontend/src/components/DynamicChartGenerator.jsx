@@ -20,6 +20,9 @@ import {
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
+import * as domtoimage from "dom-to-image-more";
+import { toPng } from "html-to-image";
+import * as domToImage from "dom-to-image";
 
 /**
  * DynamicChartGenerator - A professional chart generator component
@@ -49,6 +52,7 @@ const DynamicChartGenerator = ({
   const [xAxisColumn, setXAxisColumn] = useState("");
   const [yAxisColumn, setYAxisColumn] = useState("");
   const [error, setError] = useState("");
+  const [chartKey, setChartKey] = useState(0);
 
   // View management state
   const [savedViews, setSavedViews] = useState([]);
@@ -76,6 +80,7 @@ const DynamicChartGenerator = ({
       "#8B5CF6",
     ],
   };
+
 
   // Helper function to determine if a column contains numeric data
   const isNumericColumn = (columnName) => {
@@ -315,24 +320,35 @@ const DynamicChartGenerator = ({
         );
         const othersCount = totalCount - topCategoriesCount;
 
-        processedData = sortedEntries.map(([name, value], index) => ({
-          name: name.length > 20 ? name.substring(0, 20) + "..." : name, // Truncate long names
-          value,
-          total: totalCount,
-          fill: colorPalette.pie[index % colorPalette.pie.length],
-        }));
+        processedData = sortedEntries.map(([name, value], index) => {
+          const fillColor = colorPalette.pie[index % colorPalette.pie.length];
+          console.log(`Pie chart data processing ${index}:`, { name, value, fill: fillColor });
+          return {
+            name: name.length > 20 ? name.substring(0, 20) + "..." : name, // Truncate long names
+            value,
+            total: totalCount,
+            fill: fillColor,
+            color: fillColor, // Add explicit color property
+          };
+        });
 
         // Add "Others" category if there are remaining items
         if (othersCount > 0) {
+          const othersFillColor = colorPalette.pie[10 % colorPalette.pie.length];
+          console.log(`Pie chart Others category:`, { name: "Others", value: othersCount, fill: othersFillColor });
           processedData.push({
             name: `Others (${
               Object.keys(aggregatedData).length - 10
             } categories)`,
             value: othersCount,
             total: totalCount,
-            fill: colorPalette.pie[10 % colorPalette.pie.length],
+            fill: othersFillColor,
+            color: othersFillColor, // Add explicit color property
           });
         }
+        
+        console.log("Final processed pie chart data:", processedData);
+        console.log("Color palette:", colorPalette.pie);
       } else {
         // For other chart types, use X and Y axis data
         processedData = filteredData
@@ -423,6 +439,8 @@ const DynamicChartGenerator = ({
       };
       console.log("DynamicChartGenerator: Setting generated chart:", chartConfig);
       setGeneratedChart(chartConfig);
+      // Force chart re-render
+      setChartKey(prev => prev + 1);
     } else {
       console.log("DynamicChartGenerator: No chart data generated or setGeneratedChart not available");
     }
@@ -436,60 +454,538 @@ const DynamicChartGenerator = ({
     setError("");
   };
 
-  // Download chart function
+  // New reliable PNG method using html-to-image
+  const tryHtmlToImagePNG = () => {
+    return new Promise((resolve, reject) => {
+      try {
+        // Find the chart element - use the same improved targeting
+        let chartElement = chartContainer.querySelector('.recharts-wrapper');
+        
+        // If not found, try to find the most recent recharts wrapper
+        if (!chartElement) {
+          const allRechartsWrappers = document.querySelectorAll('.recharts-wrapper');
+          if (allRechartsWrappers.length > 0) {
+            chartElement = allRechartsWrappers[allRechartsWrappers.length - 1]; // Get the most recent one
+          }
+        }
+        
+        if (!chartElement) {
+          throw new Error('Chart element not found for html-to-image PNG method');
+        }
+
+        console.log('Trying html-to-image method on:', chartElement);
+
+        // Use html-to-image which is very reliable for SVG charts
+        toPng(chartElement, {
+          quality: 0.95,
+          backgroundColor: '#ffffff',
+          width: chartElement.offsetWidth,
+          height: chartElement.offsetHeight,
+          pixelRatio: 2, // Higher resolution
+          filter: (node) => {
+            // Filter out tooltips and overlays
+            return !node.classList?.contains('recharts-tooltip-wrapper') &&
+                   !node.classList?.contains('recharts-tooltip') &&
+                   !node.classList?.contains('recharts-active-shape') &&
+                   node.style?.position !== 'absolute';
+          }
+        }).then((dataUrl) => {
+          console.log('html-to-image PNG created successfully');
+          
+          // Convert data URL to canvas
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas);
+          };
+          
+          img.onerror = () => {
+            reject(new Error('Failed to load image from data URL'));
+          };
+          
+          img.src = dataUrl;
+        }).catch((error) => {
+          console.error('html-to-image method failed:', error);
+          reject(error);
+        });
+      } catch (error) {
+        console.error('html-to-image PNG method error:', error);
+        reject(error);
+      }
+    });
+  };
+
+  // Alternative PNG download method using dom-to-image-more (better for SVG)
+  const tryAlternativePNG = () => {
+    return new Promise((resolve, reject) => {
+      try {
+        // Find the chart element - use the same improved targeting
+        let chartElement = chartContainer.querySelector('.recharts-wrapper');
+        
+        // If not found, try to find the most recent recharts wrapper
+        if (!chartElement) {
+          const allRechartsWrappers = document.querySelectorAll('.recharts-wrapper');
+          if (allRechartsWrappers.length > 0) {
+            chartElement = allRechartsWrappers[allRechartsWrappers.length - 1]; // Get the most recent one
+          }
+        }
+        
+        if (!chartElement) {
+          throw new Error('Chart element not found for alternative PNG method');
+        }
+
+        console.log('Trying dom-to-image-more method on:', chartElement);
+
+        // Use dom-to-image-more which handles SVG better
+        domtoimage.toPng(chartElement, {
+          quality: 0.95,
+          bgcolor: '#ffffff',
+          width: chartElement.offsetWidth,
+          height: chartElement.offsetHeight,
+          style: {
+            transform: 'scale(1)',
+            transformOrigin: 'top left'
+          },
+          filter: (node) => {
+            // Filter out tooltips and overlays
+            return !node.classList?.contains('recharts-tooltip-wrapper') &&
+                   !node.classList?.contains('recharts-tooltip') &&
+                   !node.classList?.contains('recharts-active-shape') &&
+                   node.style?.position !== 'absolute';
+          }
+        }).then((dataUrl) => {
+          console.log('dom-to-image-more PNG created successfully');
+          
+          // Convert data URL to canvas
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas);
+          };
+          
+          img.onerror = () => {
+            reject(new Error('Failed to load image from data URL'));
+          };
+          
+          img.src = dataUrl;
+        }).catch((error) => {
+          console.error('dom-to-image-more method failed:', error);
+          reject(error);
+        });
+      } catch (error) {
+        console.error('Alternative PNG method error:', error);
+        reject(error);
+      }
+    });
+  };
+
+  // Final PNG method using native canvas and SVG rendering
+  const tryFinalPNGMethod = () => {
+    return new Promise((resolve, reject) => {
+      try {
+        // Find the chart element - use the same improved targeting
+        let chartElement = chartContainer.querySelector('.recharts-wrapper');
+        
+        // If not found, try to find the most recent recharts wrapper
+        if (!chartElement) {
+          const allRechartsWrappers = document.querySelectorAll('.recharts-wrapper');
+          if (allRechartsWrappers.length > 0) {
+            chartElement = allRechartsWrappers[allRechartsWrappers.length - 1]; // Get the most recent one
+          }
+        }
+        
+        if (!chartElement) {
+          throw new Error('Chart element not found for final PNG method');
+        }
+
+        console.log('Trying final PNG method on:', chartElement);
+
+        // Get all SVG elements within the chart
+        const svgElements = chartElement.querySelectorAll('svg');
+        if (svgElements.length === 0) {
+          throw new Error('No SVG elements found in chart');
+        }
+
+        // Create a canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size
+        canvas.width = chartElement.offsetWidth;
+        canvas.height = chartElement.offsetHeight;
+        
+        // Fill with white background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Convert each SVG to image and draw on canvas
+        let processedCount = 0;
+        const totalSVGs = svgElements.length;
+
+        svgElements.forEach((svg, index) => {
+          // Convert SVG to data URL
+          const svgData = new XMLSerializer().serializeToString(svg);
+          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+          const svgUrl = URL.createObjectURL(svgBlob);
+
+          const img = new Image();
+          img.onload = () => {
+            // Draw the SVG image on canvas
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(svgUrl);
+            
+            processedCount++;
+            if (processedCount === totalSVGs) {
+              console.log('Final PNG method canvas created successfully');
+              resolve(canvas);
+            }
+          };
+          
+          img.onerror = () => {
+            URL.revokeObjectURL(svgUrl);
+            processedCount++;
+            if (processedCount === totalSVGs) {
+              console.log('Final PNG method canvas created (with some errors)');
+              resolve(canvas);
+            }
+          };
+          
+          img.src = svgUrl;
+        });
+
+        // Timeout fallback
+        setTimeout(() => {
+          if (processedCount < totalSVGs) {
+            console.log('Final PNG method timeout, using partial result');
+            resolve(canvas);
+          }
+        }, 3000);
+
+      } catch (error) {
+        console.error('Final PNG method error:', error);
+        reject(error);
+      }
+    });
+  };
+
+  // Alternative download method using SVG approach
+  const downloadChartAsSVG = () => {
+    try {
+      // Find the specific chart container first
+      const chartContainerId = `chart-container-${generatedChart.type}-${Date.now()}`;
+      let chartContainer = document.getElementById(chartContainerId);
+      
+      if (!chartContainer) {
+        const allChartContainers = document.querySelectorAll('[id^="chart-container-"]');
+        if (allChartContainers.length > 0) {
+          chartContainer = allChartContainers[allChartContainers.length - 1];
+        }
+      }
+      
+      if (!chartContainer) {
+        throw new Error('Chart container not found for SVG download');
+      }
+
+      // Find SVG elements only within the specific chart container
+      const svgElements = chartContainer.querySelectorAll('svg');
+      if (svgElements.length === 0) {
+        throw new Error('No SVG elements found in chart');
+      }
+
+      console.log('Found SVG elements:', svgElements.length);
+
+      // Combine all SVG elements from the specific chart
+      let svgContent = '';
+      svgElements.forEach(svg => {
+        svgContent += svg.outerHTML;
+      });
+
+      // Create a complete SVG with proper dimensions
+      const combinedSVG = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+          <rect width="100%" height="100%" fill="white"/>
+          ${svgContent}
+        </svg>
+      `;
+
+      // Create blob and download
+      const blob = new Blob([combinedSVG], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `chart-${generatedChart.type}-${new Date().toISOString().split('T')[0]}.svg`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      console.log('Chart downloaded as SVG successfully');
+      return true;
+    } catch (error) {
+      console.error('SVG download failed:', error);
+      return false;
+    }
+  };
+
+  // Simple and reliable PNG download function
   const handleDownloadChart = () => {
-    if (!generatedChart) return;
+    if (!generatedChart) {
+      setError('No chart available to download. Please generate a chart first.');
+      return;
+    }
 
     try {
-      // Find the chart container
-      const chartContainer = document.querySelector('.recharts-wrapper');
+      // Find the specific chart container using data attributes
+      let chartContainer = document.querySelector(`[data-chart-type="${generatedChart.type}"][data-chart-generated="true"]`);
+      
+      // If not found by data attributes, try to find by ID
       if (!chartContainer) {
-        setError('Chart container not found. Please try regenerating the chart.');
+        const chartContainerId = `chart-container-${generatedChart.type}-${Date.now()}`;
+        chartContainer = document.getElementById(chartContainerId);
+      }
+      
+      // If not found by ID, try to find the most recent chart container
+      if (!chartContainer) {
+        const allChartContainers = document.querySelectorAll('[id^="chart-container-"]');
+        if (allChartContainers.length > 0) {
+          chartContainer = allChartContainers[allChartContainers.length - 1]; // Get the most recent one
+        }
+      }
+      
+      // If still not found, try to find the chart container that contains the current chart type
+      if (!chartContainer) {
+        const chartContainers = document.querySelectorAll('[id^="chart-container-"]');
+        for (let container of chartContainers) {
+          if (container.id.includes(generatedChart.type)) {
+            chartContainer = container;
+            break;
+          }
+        }
+      }
+      
+      // Find the chart element within the specific container
+      let chartElement = null;
+      if (chartContainer) {
+        chartElement = chartContainer.querySelector('.recharts-wrapper');
+      }
+      
+      // If not found in container, try to find the most recent recharts wrapper
+      if (!chartElement) {
+        const allRechartsWrappers = document.querySelectorAll('.recharts-wrapper');
+        if (allRechartsWrappers.length > 0) {
+          chartElement = allRechartsWrappers[allRechartsWrappers.length - 1]; // Get the most recent one
+        }
+      }
+      
+      // Final fallback
+      if (!chartElement) {
+        chartElement = document.querySelector('[class*="recharts"]');
+      }
+      
+      if (!chartElement) {
+        setError('Chart not found. Please try regenerating the chart.');
         return;
       }
 
-      // Simple approach: capture the chart container directly with minimal options
-      html2canvas(chartContainer, {
-        backgroundColor: '#ffffff',
-        scale: 1.5, // Good resolution without being too heavy
-        useCORS: true,
-        allowTaint: true,
-        logging: false, // Disable logging to reduce console noise
-        width: chartContainer.offsetWidth,
-        height: chartContainer.offsetHeight,
-        scrollX: 0,
-        scrollY: 0,
-        ignoreElements: (element) => {
-          // Ignore tooltips and other overlay elements
-          return element.classList.contains('recharts-tooltip-wrapper') ||
-                 element.classList.contains('recharts-legend-wrapper') ||
-                 element.classList.contains('recharts-brush') ||
-                 element.style.position === 'absolute';
-        }
-      }).then(canvas => {
-        // Convert canvas to blob and download
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `chart-${generatedChart.type}-${new Date().toISOString().split('T')[0]}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          } else {
-            setError('Failed to generate PNG image. Please try again.');
-          }
-        }, 'image/png');
-      }).catch((error) => {
-        console.error('html2canvas error:', error);
-        setError('Failed to capture chart as image. Please try again.');
+      console.log('Found chart container:', chartContainer);
+      console.log('Found chart element:', chartElement);
+      console.log('Generated chart type:', generatedChart.type);
+      console.log('Chart container ID:', chartContainer?.id);
+      console.log('Chart container data attributes:', {
+        chartType: chartContainer?.getAttribute('data-chart-type'),
+        chartGenerated: chartContainer?.getAttribute('data-chart-generated')
       });
       
+      // Verify we're targeting the right chart
+      if (chartContainer && chartContainer.getAttribute('data-chart-type') !== generatedChart.type) {
+        console.warn('Warning: Chart container type mismatch!', {
+          expected: generatedChart.type,
+          found: chartContainer.getAttribute('data-chart-type')
+        });
+      }
+
+      // Preserve existing colors and ensure visibility
+      const forceRerender = () => {
+        // Trigger a reflow to ensure all elements are rendered
+        chartElement.offsetHeight;
+        
+        // Force visibility of all elements without changing colors
+        const allElements = chartElement.querySelectorAll('*');
+        allElements.forEach(el => {
+          if (el.style) {
+            el.style.visibility = 'visible';
+            el.style.display = '';
+            el.style.opacity = '1';
+          }
+        });
+
+        // Ensure SVG elements are visible
+        const svgElements = chartElement.querySelectorAll('svg, path, text');
+        svgElements.forEach(el => {
+          el.style.visibility = 'visible';
+          el.style.display = '';
+          el.style.opacity = '1';
+        });
+
+        // Log current colors without overriding them
+        const paths = chartElement.querySelectorAll('path');
+        paths.forEach((path, index) => {
+          const currentFill = path.getAttribute('fill') || path.style.fill;
+          const currentStroke = path.getAttribute('stroke') || path.style.stroke;
+          console.log(`Path ${index} current colors:`, { fill: currentFill, stroke: currentStroke });
+        });
+      };
+
+      // Apply the re-render
+      forceRerender();
+
+      // Wait longer for the chart to fully render with all details and colors
+      setTimeout(() => {
+        // Force another re-render to ensure colors are applied
+        forceRerender();
+        
+        // Additional delay to ensure colors are stable
+        setTimeout(() => {
+        // Method 1: Try simple dom-to-image first (most reliable)
+        domToImage.toPng(chartElement, {
+          quality: 0.95,
+          bgcolor: '#ffffff',
+          width: chartElement.offsetWidth,
+          height: chartElement.offsetHeight,
+          pixelRatio: 3, // Higher resolution for better details
+          style: {
+            transform: 'scale(1)',
+            transformOrigin: 'top left',
+            // Ensure text is visible
+            color: '#000000',
+            fill: '#000000',
+            // Force visibility
+            visibility: 'visible',
+            opacity: '1'
+          },
+          filter: (node) => {
+            // Only filter out tooltips and overlays, keep all chart details
+            return !node.classList?.contains('recharts-tooltip-wrapper') &&
+                   !node.classList?.contains('recharts-tooltip') &&
+                   !node.classList?.contains('recharts-active-shape') &&
+                   node.style?.position !== 'absolute' &&
+                   node.style?.display !== 'none' &&
+                   node.style?.visibility !== 'hidden';
+          }
+        }).then((dataUrl) => {
+        console.log('dom-to-image PNG created successfully');
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `chart-${generatedChart.type}-${new Date().toISOString().split('T')[0]}.png`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('Chart downloaded as PNG successfully');
+        setError(''); // Clear any previous errors
+      }).catch((error) => {
+        console.error('dom-to-image failed, trying html2canvas:', error);
+        
+        // Method 2: Try html2canvas as fallback
+        html2canvas(chartElement, {
+          backgroundColor: '#ffffff',
+          scale: 3, // Higher scale for better details
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          width: chartElement.offsetWidth,
+          height: chartElement.offsetHeight,
+          scrollX: 0,
+          scrollY: 0,
+          foreignObjectRendering: true, // Enable foreign object rendering for better SVG support
+          onclone: (clonedDoc) => {
+            // Preserve existing colors in clone
+            const allElements = clonedDoc.querySelectorAll('*');
+            allElements.forEach(el => {
+              el.style.visibility = 'visible';
+              el.style.display = '';
+              el.style.opacity = '1';
+            });
+
+            // Log colors in clone without overriding them
+            const paths = clonedDoc.querySelectorAll('path');
+            paths.forEach((path, index) => {
+              const currentFill = path.getAttribute('fill') || path.style.fill;
+              const currentStroke = path.getAttribute('stroke') || path.style.stroke;
+              console.log(`Clone Path ${index} colors:`, { fill: currentFill, stroke: currentStroke });
+            });
+
+            // Ensure text is visible in clone
+            const textElements = clonedDoc.querySelectorAll('text');
+            textElements.forEach(el => {
+              if (!el.getAttribute('fill') && !el.style.fill) {
+                el.setAttribute('fill', '#000000');
+                el.style.fill = '#000000';
+              }
+            });
+          },
+          ignoreElements: (element) => {
+            // Only ignore tooltips and overlays, keep all chart details
+            return element.classList.contains('recharts-tooltip-wrapper') ||
+                   element.classList.contains('recharts-tooltip') ||
+                   element.classList.contains('recharts-active-shape') ||
+                   element.style.position === 'absolute' ||
+                   element.style.display === 'none' ||
+                   element.style.visibility === 'hidden';
+          }
+        }).then(canvas => {
+          console.log('html2canvas PNG created successfully');
+          
+          // Convert canvas to blob and download
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `chart-${generatedChart.type}-${new Date().toISOString().split('T')[0]}.png`;
+              link.style.display = 'none';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+              
+              console.log('Chart downloaded as PNG successfully (html2canvas)');
+              setError(''); // Clear any previous errors
+            } else {
+              throw new Error('Failed to generate PNG blob');
+            }
+          }, 'image/png', 0.95);
+        }).catch((html2canvasError) => {
+          console.error('html2canvas also failed, trying SVG fallback:', html2canvasError);
+          
+          // Final fallback to SVG download
+          if (downloadChartAsSVG()) {
+            setError('PNG download failed, but chart was downloaded as SVG instead.');
+          } else {
+            setError(`Failed to download chart: ${html2canvasError.message}. Please try regenerating the chart.`);
+          }
+        });
+      });
+        }, 200); // Additional delay to ensure colors are stable
+      }, 500); // Longer delay to ensure chart is fully rendered with all details
+
     } catch (error) {
       console.error('Error downloading chart:', error);
-      setError('Failed to download chart. Please try again.');
+      setError(`Failed to download chart: ${error.message}. Please try again.`);
     }
   };
 
@@ -758,17 +1254,32 @@ const DynamicChartGenerator = ({
               data={data}
               cx="50%"
               cy="50%"
-              labelLine={false}
-              label={false} // Disable labels on pie slices to avoid overlap
+              labelLine={true}
+              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
               outerRadius={120}
               innerRadius={40}
-              fill="#8884d8"
               dataKey="value"
               paddingAngle={2}
             >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.fill} />
-              ))}
+              {data.map((entry, index) => {
+                const fillColor = entry.fill || entry.color || colorPalette.pie[index % colorPalette.pie.length];
+                console.log(`Pie chart cell ${index}:`, { 
+                  name: entry.name, 
+                  value: entry.value, 
+                  fill: fillColor, 
+                  entry,
+                  assignedColor: fillColor
+                });
+                return (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={fillColor}
+                    stroke={fillColor}
+                    strokeWidth={2}
+                    style={{ fill: fillColor }}
+                  />
+                );
+              })}
             </Pie>
             <Tooltip
               content={<CustomTooltip />}
@@ -1201,6 +1712,9 @@ const DynamicChartGenerator = ({
         {generatedChart && (
           <motion.div
             key={generatedChart.type}
+            id={`chart-container-${generatedChart.type}-${Date.now()}`}
+            data-chart-type={generatedChart.type}
+            data-chart-generated="true"
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -1253,7 +1767,32 @@ const DynamicChartGenerator = ({
               </div>
             </div>
 
-            {renderChart()}
+            <div key={`chart-${generatedChart.type}-${chartKey}`}>
+              {renderChart()}
+              
+              {/* Color Legend for Download */}
+              {generatedChart.type === 'pie' && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Color Legend:</h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {generatedChart.data?.map((entry, index) => {
+                      const fillColor = entry.fill || entry.color || colorPalette.pie[index % colorPalette.pie.length];
+                      return (
+                        <div key={`download-legend-${index}`} className="flex items-center space-x-2">
+                          <div 
+                            className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0"
+                            style={{ backgroundColor: fillColor }}
+                          ></div>
+                          <span className="text-gray-600 truncate">
+                            {entry.name}: {entry.value}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

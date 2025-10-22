@@ -218,10 +218,6 @@ const SummaryPage = () => {
 
   return (
     <div className="min-h-screen py-4" style={{backgroundColor: '#F6F2F4'}}>
-      {/* Page Title */}
-      <h1 className="text-center text-3xl font-bold py-4" style={{color: '#030304'}}>
-        Summary Overview
-      </h1>
 
       {/* Main Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-8">

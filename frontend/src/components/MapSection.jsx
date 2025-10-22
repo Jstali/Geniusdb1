@@ -393,7 +393,7 @@ const MapSection = ({
                 </h3>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full bg-geniusAquamarine flex-shrink-0"></div>
+                    <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0"></div>
                     <span className="text-gray-700">
                       Green - 50MW Generation Headroom and greater
                     </span>

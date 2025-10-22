@@ -19,6 +19,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
+import html2canvas from "html2canvas";
 
 /**
  * DynamicChartGenerator - A professional chart generator component
@@ -433,6 +434,63 @@ const DynamicChartGenerator = ({
       setGeneratedChart(null);
     }
     setError("");
+  };
+
+  // Download chart function
+  const handleDownloadChart = () => {
+    if (!generatedChart) return;
+
+    try {
+      // Find the chart container
+      const chartContainer = document.querySelector('.recharts-wrapper');
+      if (!chartContainer) {
+        setError('Chart container not found. Please try regenerating the chart.');
+        return;
+      }
+
+      // Simple approach: capture the chart container directly with minimal options
+      html2canvas(chartContainer, {
+        backgroundColor: '#ffffff',
+        scale: 1.5, // Good resolution without being too heavy
+        useCORS: true,
+        allowTaint: true,
+        logging: false, // Disable logging to reduce console noise
+        width: chartContainer.offsetWidth,
+        height: chartContainer.offsetHeight,
+        scrollX: 0,
+        scrollY: 0,
+        ignoreElements: (element) => {
+          // Ignore tooltips and other overlay elements
+          return element.classList.contains('recharts-tooltip-wrapper') ||
+                 element.classList.contains('recharts-legend-wrapper') ||
+                 element.classList.contains('recharts-brush') ||
+                 element.style.position === 'absolute';
+        }
+      }).then(canvas => {
+        // Convert canvas to blob and download
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `chart-${generatedChart.type}-${new Date().toISOString().split('T')[0]}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          } else {
+            setError('Failed to generate PNG image. Please try again.');
+          }
+        }, 'image/png');
+      }).catch((error) => {
+        console.error('html2canvas error:', error);
+        setError('Failed to capture chart as image. Please try again.');
+      });
+      
+    } catch (error) {
+      console.error('Error downloading chart:', error);
+      setError('Failed to download chart. Please try again.');
+    }
   };
 
   // Load saved view configuration
@@ -1172,14 +1230,27 @@ const DynamicChartGenerator = ({
                       } data points displayed`}
                 </p>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleClearChart}
-                className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
-              >
-                ✕ Clear
-              </motion.button>
+              <div className="flex items-center gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleDownloadChart}
+                  className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Download
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleClearChart}
+                  className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                >
+                  ✕ Clear
+                </motion.button>
+              </div>
             </div>
 
             {renderChart()}

@@ -29,6 +29,7 @@ const HomePage = ({
   const [filteredTableData, setFilteredTableData] = useState(null); // null means no table filters active
   const [tableFilters, setTableFilters] = useState({}); // Add state for table filters
   const [activeData, setActiveData] = useState([]); // Add state for active filtered dataset
+  const [showFullSites, setShowFullSites] = useState(false); // Add state for site filtering toggle
   const [filters, setFilters] = useState({
     siteName: "",
     voltage: "",
@@ -37,6 +38,27 @@ const HomePage = ({
   });
   // Get activeView from tableViewConfig instead of maintaining separate state
   const activeView = tableViewConfig?.activeView || null;
+
+  // Function to filter sites based on the requirements
+  const filterSitesByCategory = (data) => {
+    if (showFullSites) {
+      return data; // Show all sites
+    }
+
+    // Filter for limited sites: 10 green, 20 amber, 70 red
+    const greenSites = data.filter(item => item["Generation Headroom Mw"] >= 50);
+    const amberSites = data.filter(item => 
+      item["Generation Headroom Mw"] >= 20 && item["Generation Headroom Mw"] < 50
+    );
+    const redSites = data.filter(item => item["Generation Headroom Mw"] < 20);
+
+    // Take limited number of sites from each category
+    const limitedGreenSites = greenSites.slice(0, 10);
+    const limitedAmberSites = amberSites.slice(0, 20);
+    const limitedRedSites = redSites.slice(0, 70);
+
+    return [...limitedGreenSites, ...limitedAmberSites, ...limitedRedSites];
+  };
 
   // Compute activeData whenever view configuration or data changes
   useEffect(() => {
@@ -49,14 +71,18 @@ const HomePage = ({
     });
 
     if (data.length > 0) {
-      const computedActiveData = getActiveData(data, {
+      // First apply site filtering, then apply view configuration
+      const filteredSites = filterSitesByCategory(data);
+      const computedActiveData = getActiveData(filteredSites, {
         selectedColumns: tableViewConfig?.selectedColumns || [],
         filters: tableViewConfig?.filters || {}
       });
       
       console.log("HomePage: Computed activeData", {
         originalDataLength: data.length,
+        filteredSitesLength: filteredSites.length,
         activeDataLength: computedActiveData.length,
+        showFullSites,
         sampleActiveData: computedActiveData.slice(0, 3)
       });
       
@@ -67,7 +93,7 @@ const HomePage = ({
       setActiveData([]);
       setFilteredTableData(null);
     }
-  }, [data, tableViewConfig?.selectedColumns, tableViewConfig?.filters, activeView]);
+  }, [data, tableViewConfig?.selectedColumns, tableViewConfig?.filters, activeView, showFullSites]);
 
   console.log("HomePage received props:", { tableViewConfig, chartViewConfig });
   console.log("HomePage activeView:", activeView);
@@ -190,12 +216,14 @@ const HomePage = ({
     }));
   };
 
-  // Calculate summary statistics
+  // Calculate summary statistics based on filtered data
   const summaryStats = useMemo(() => {
     if (!data || data.length === 0) return null;
 
-    const totalSubstations = data.length;
-    const headroomValues = data
+    // Use filtered sites for statistics
+    const filteredSites = filterSitesByCategory(data);
+    const totalSubstations = filteredSites.length;
+    const headroomValues = filteredSites
       .map((item) => item["Generation Headroom Mw"])
       .filter((val) => val !== null && val !== undefined);
 
@@ -205,15 +233,15 @@ const HomePage = ({
           headroomValues.length
         : null;
 
-    const greenSites = data.filter(
+    const greenSites = filteredSites.filter(
       (item) => item["Generation Headroom Mw"] >= 50
     ).length;
-    const amberSites = data.filter(
+    const amberSites = filteredSites.filter(
       (item) =>
         item["Generation Headroom Mw"] >= 20 &&
         item["Generation Headroom Mw"] < 50
     ).length;
-    const redSites = data.filter(
+    const redSites = filteredSites.filter(
       (item) => item["Generation Headroom Mw"] < 20
     ).length;
 
@@ -224,7 +252,7 @@ const HomePage = ({
       amberSites,
       redSites,
     };
-  }, [data]);
+  }, [data, showFullSites]);
 
   // Extract unique voltage levels and operators from data
   const voltageLevels = [...new Set(data.map((site) => site["Site Voltage"]))]
@@ -233,6 +261,37 @@ const HomePage = ({
   const operators = [...new Set(data.map((site) => site["Licence Area"]))]
     .filter(Boolean)
     .sort();
+  
+  // Extract unique site names for autocomplete
+  const siteNames = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    // Get all site names and clean them
+    const allSiteNames = data.map((site) => {
+      const siteName = site["Site Name"] || site.site_name;
+      return siteName ? siteName.trim() : null;
+    }).filter(Boolean);
+    
+    // Debug logging
+    console.log("All site names before deduplication:", allSiteNames.length);
+    console.log("Sample site names:", allSiteNames.slice(0, 5));
+    
+    // Use Map to ensure true uniqueness (preserves order)
+    const uniqueSiteNames = [];
+    const seen = new Set();
+    
+    for (const name of allSiteNames) {
+      if (!seen.has(name)) {
+        seen.add(name);
+        uniqueSiteNames.push(name);
+      }
+    }
+    
+    console.log("Unique site names after deduplication:", uniqueSiteNames.length);
+    console.log("Sample unique site names:", uniqueSiteNames.slice(0, 5));
+    
+    return uniqueSiteNames.sort();
+  }, [data]);
 
   const handleMarkerClick = (site) => {
     setSelectedSite(site);
@@ -278,6 +337,7 @@ const HomePage = ({
             }}
             voltageLevels={voltageLevels}
             operators={operators}
+            siteNames={siteNames}
             currentFilters={filters}
           />
         </div>
@@ -290,15 +350,17 @@ const HomePage = ({
               filteredTableDataLength: filteredTableData?.length || 0,
               activeDataLength: activeData.length,
               rawDataLength: data.length,
+              filteredSitesLength: filterSitesByCategory(data).length,
               mapFilters,
               selectedColumns: tableViewConfig?.selectedColumns || [],
               activeView,
-              dataToUse: filteredTableData !== null ? "filteredTableData" : (activeData.length > 0 ? "activeData" : "rawData"),
-              actualDataLength: filteredTableData !== null ? filteredTableData.length : (activeData.length > 0 ? activeData.length : data.length)
+              showFullSites,
+              dataToUse: filteredTableData !== null ? "filteredTableData" : "filteredSites",
+              actualDataLength: filteredTableData !== null ? filteredTableData.length : filterSitesByCategory(data).length
             })}
             <CompactGoogleMapSimple
               isHomePage={true}
-              data={filteredTableData !== null ? filteredTableData : (activeData.length > 0 ? activeData : data)} // Use filtered table data if set (even if empty), then activeData, then raw data
+              data={filteredTableData !== null ? filteredTableData : filterSitesByCategory(data)} // Always use filtered sites for map
               filters={mapFilters}
               selectedColumns={tableViewConfig?.selectedColumns || []}
               onMarkerClick={handleMarkerClick}
@@ -331,8 +393,8 @@ const HomePage = ({
           </div>
         ) : (
         <DataTable
-          key={`table-${activeView || 'default'}`} // Only re-render when activeView changes, not when columns change
-          data={data} // Always use original data for global search to work properly
+          key={`table-${activeView || 'default'}-${showFullSites}`} // Re-render when site filtering changes
+          data={data} // Pass full dataset to table
           columns={columns}
           selectedColumns={tableViewConfig?.selectedColumns || []} // Pass empty array when no columns selected
           onSelectedColumnsChange={handleSelectedColumnsChange}
@@ -341,6 +403,8 @@ const HomePage = ({
           initialFilters={tableViewConfig?.filters || {}} // Pass initial filters from saved view
           initialSortConfig={tableViewConfig?.sortBy ? { sortBy: tableViewConfig.sortBy, sortDirection: tableViewConfig.sortDirection } : null} // Pass initial sort config
           initialPaginationConfig={tableViewConfig?.pageSize ? { pageSize: tableViewConfig.pageSize, currentPage: tableViewConfig.currentPage } : null} // Pass initial pagination config
+          showFullSites={showFullSites} // Pass site filtering state
+          onToggleFullSites={() => setShowFullSites(!showFullSites)} // Pass toggle handler
         />
         )}
       </div>

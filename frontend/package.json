@@ -40,6 +40,7 @@
     "echarts-gl": "^2.0.9",
     "framer-motion": "^12.23.22",
     "handsontable": "^16.1.1",
+    "html2canvas": "^1.4.1",
     "jquery": "^3.7.1",
     "lucide-react": "^0.544.0",
     "pivottable": "^2.23.0",

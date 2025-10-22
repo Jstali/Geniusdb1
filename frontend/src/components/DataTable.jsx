@@ -45,6 +45,8 @@ const DataTable = ({
   initialFilters = {}, // Add this prop to accept initial filters
   initialSortConfig = null, // Add this prop to accept initial sort configuration
   initialPaginationConfig = null, // Add this prop to accept initial pagination configuration
+  showFullSites = false, // Add this prop for site filtering toggle
+  onToggleFullSites = () => {}, // Add this prop to handle site filtering toggle
 }) => {
   // Initialize all hooks first to maintain consistent order
   const [columnFilters, setColumnFilters] = useState([]);
@@ -61,6 +63,29 @@ const DataTable = ({
   const [columnMultiSelectValues, setColumnMultiSelectValues] = useState({});
   const [showColumnToggle, setShowColumnToggle] = useState(false);
   const showColumnToggleRef = useRef(false);
+
+  // Site filtering logic - filter data based on showFullSites prop
+  const filteredData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    if (showFullSites) {
+      return data; // Show all sites
+    }
+
+    // Filter for limited sites: 10 green, 20 amber, 70 red
+    const greenSites = data.filter(item => item["Generation Headroom Mw"] >= 50);
+    const amberSites = data.filter(item => 
+      item["Generation Headroom Mw"] >= 20 && item["Generation Headroom Mw"] < 50
+    );
+    const redSites = data.filter(item => item["Generation Headroom Mw"] < 20);
+
+    // Take limited number of sites from each category
+    const limitedGreenSites = greenSites.slice(0, 10);
+    const limitedAmberSites = amberSites.slice(0, 20);
+    const limitedRedSites = redSites.slice(0, 70);
+
+    return [...limitedGreenSites, ...limitedAmberSites, ...limitedRedSites];
+  }, [data, showFullSites]);
   // Pivot table state
   const [isPivotMode, setIsPivotMode] = useState(false);
   const [pivotConfig, setPivotConfig] = useState(null);
@@ -313,7 +338,7 @@ const DataTable = ({
   }));
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns: processedColumns,
     state: {
       columnFilters,
@@ -407,15 +432,16 @@ const DataTable = ({
       const filteredRows = table.getFilteredRowModel().rows;
       const filteredData = filteredRows.map(row => row.original);
       console.log("DataTable: Notifying parent of filtered data change", {
-        originalDataLength: data.length,
+        originalDataLength: filteredData.length,
         filteredDataLength: filteredData.length,
         globalFilter: globalFilter,
         columnFilters: columnFilters,
+        showFullSites: showFullSites,
         sampleFilteredData: filteredData.slice(0, 3)
       });
       onFilteredDataChange(filteredData);
     }
-  }, [table, onFilteredDataChange, data.length, columnFilters, globalFilter, sorting, columnVisibility]);
+  }, [table, onFilteredDataChange, filteredData.length, columnFilters, globalFilter, sorting, columnVisibility, showFullSites]);
 
   // Apply initial filters when they change (only once per initialFilters change)
   useEffect(() => {
@@ -503,13 +529,28 @@ const DataTable = ({
     if (table) {
       const filteredRows = table.getFilteredRowModel().rows;
       console.log("DataTable: Table filtered rows changed:", {
-        totalRows: data.length,
+        totalRows: filteredData.length,
         filteredRows: filteredRows.length,
         globalFilter: globalFilter,
-        columnFilters: columnFilters.length
+        columnFilters: columnFilters.length,
+        showFullSites: showFullSites
       });
     }
-  }, [table, globalFilter, columnFilters, data.length]);
+  }, [table, globalFilter, columnFilters, filteredData.length, showFullSites]);
+
+  // Monitor pagination state changes
+  useEffect(() => {
+    if (table) {
+      const paginationState = table.getState().pagination;
+      console.log("DataTable: Pagination state changed:", {
+        pageIndex: paginationState.pageIndex,
+        pageSize: paginationState.pageSize,
+        canNextPage: table.getCanNextPage(),
+        canPreviousPage: table.getCanPreviousPage(),
+        pageCount: table.getPageCount()
+      });
+    }
+  }, [table, pagination]);
 
   // Track user-applied filters (excluding initial filters from saved views)
   const [userAppliedFilters, setUserAppliedFilters] = useState({
@@ -676,7 +717,7 @@ const DataTable = ({
       if (value === "SELECT_ALL") {
         if (isChecked) {
           // Select all values
-          newValues = [...getColumnFilterOptions[columnId]];
+          newValues = [...getUniqueValues(columnId)];
         } else {
           // Deselect all values
           newValues = [];
@@ -776,10 +817,10 @@ const DataTable = ({
 
   // Get unique values for a column (for filter dropdowns)
   const getUniqueValues = (columnId) => {
-    if (!data || !columnId) return [];
+    if (!filteredData || !columnId) return [];
     
     const uniqueValues = [
-      ...new Set(data.map((row) => {
+      ...new Set(filteredData.map((row) => {
         const val = row[columnId];
         // Convert null/undefined to "null" for display
         if (val === null || val === undefined) return "null";
@@ -959,6 +1000,26 @@ const DataTable = ({
 
         {/* Right side - Action buttons */}
         <div className="flex items-center gap-2">
+          {/* Full Sites Toggle */}
+          <button
+            onClick={onToggleFullSites}
+            className="px-3 py-2 text-sm font-medium rounded-md transition-all duration-300 transform hover:scale-105 focus:outline-none"
+            style={{
+              backgroundColor: showFullSites ? '#FF6B6B' : '#4CAF50',
+              color: 'white',
+              border: '1px solid rgba(3, 3, 4, 0.1)',
+              boxShadow: showFullSites ? '0 4px 12px rgba(255, 107, 107, 0.3)' : '0 4px 12px rgba(76, 175, 80, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.boxShadow = showFullSites ? '0 6px 20px rgba(255, 107, 107, 0.4)' : '0 6px 20px rgba(76, 175, 80, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.boxShadow = showFullSites ? '0 4px 12px rgba(255, 107, 107, 0.3)' : '0 4px 12px rgba(76, 175, 80, 0.3)';
+            }}
+          >
+            {showFullSites ? 'Limited Sites' : 'Full Sites'}
+          </button>
+
           {/* Column Visibility Toggle */}
           <div className="relative" ref={columnToggleRef}>
             <button
@@ -1082,7 +1143,7 @@ const DataTable = ({
             onClick={toggleViewMode}
             className="px-3 py-2 text-sm font-medium rounded-md transition-all duration-300 transform hover:scale-105 focus:outline-none"
             style={{
-              backgroundColor: isPivotMode ? '#8DE971' : 'transparent',
+              backgroundColor: isPivotMode ? '#AD96DC' : 'transparent',
               color: isPivotMode ? 'white' : '#AD96DC',
               border: `2px solid #AD96DC`,
               boxShadow: '0 4px 12px rgba(173, 150, 220, 0.2)'
@@ -1427,7 +1488,14 @@ const DataTable = ({
                   ««
                 </button>
                 <button
-                  onClick={() => table.previousPage()}
+                  onClick={() => {
+                    console.log("DataTable: Previous page clicked", {
+                      currentPage: table.getState().pagination.pageIndex,
+                      canPreviousPage: table.getCanPreviousPage(),
+                      pageCount: table.getPageCount()
+                    });
+                    table.previousPage();
+                  }}
                   disabled={!table.getCanPreviousPage()}
                   className="relative inline-flex items-center px-3 py-2 border text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
@@ -1455,7 +1523,14 @@ const DataTable = ({
                   {table.getPageCount()}
                 </span>
                 <button
-                  onClick={() => table.nextPage()}
+                  onClick={() => {
+                    console.log("DataTable: Next page clicked", {
+                      currentPage: table.getState().pagination.pageIndex,
+                      canNextPage: table.getCanNextPage(),
+                      pageCount: table.getPageCount()
+                    });
+                    table.nextPage();
+                  }}
                   disabled={!table.getCanNextPage()}
                   className="relative inline-flex items-center px-3 py-2 border text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{

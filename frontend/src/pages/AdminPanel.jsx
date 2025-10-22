@@ -272,7 +272,6 @@ const AdminPanel = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#F6F2F4" }}>
       <div className="max-w-7xl mx-auto p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Panel</h1>
 
         {/* Admin Navigation Tabs */}
         <div className="mb-8">

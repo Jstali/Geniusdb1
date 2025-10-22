@@ -199,6 +199,36 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
       .sort();
   }, [data]);
 
+  const siteNames = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    // Get all site names and clean them
+    const allSiteNames = data.map((s) => {
+      const siteName = s["Site Name"] || s.site_name;
+      return siteName ? siteName.trim() : null;
+    }).filter(Boolean);
+    
+    // Debug logging
+    console.log("MapView - All site names before deduplication:", allSiteNames.length);
+    console.log("MapView - Sample site names:", allSiteNames.slice(0, 5));
+    
+    // Use Map to ensure true uniqueness (preserves order)
+    const uniqueSiteNames = [];
+    const seen = new Set();
+    
+    for (const name of allSiteNames) {
+      if (!seen.has(name)) {
+        seen.add(name);
+        uniqueSiteNames.push(name);
+      }
+    }
+    
+    console.log("MapView - Unique site names after deduplication:", uniqueSiteNames.length);
+    console.log("MapView - Sample unique site names:", uniqueSiteNames.slice(0, 5));
+    
+    return uniqueSiteNames.sort();
+  }, [data]);
+
   const handleMarkerClick = (site) => setSelectedSite(site);
 
   console.log("MapView rendering with data:", data);
@@ -249,6 +279,7 @@ const MapView = ({ activeView = null, selectedColumns = [] }) => {
               }}
               voltageLevels={voltageLevels}
               operators={operators}
+              siteNames={siteNames}
               currentFilters={filters}
             />
           </div>

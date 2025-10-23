@@ -104,10 +104,13 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
 
   // State to track if pivot table has been generated
   const [isGenerated, setIsGenerated] = useState(false);
+  
+  // State to track if user wants to go back to configuration
+  const [showConfig, setShowConfig] = useState(false);
 
   // Use external pivotConfig if provided, otherwise use internal state
   const effectivePivotConfig = externalPivotConfig || pivotConfig;
-  const effectiveIsGenerated = externalPivotConfig ? true : isGenerated;
+  const effectiveIsGenerated = externalPivotConfig ? (externalPivotConfig !== null && !showConfig) : (isGenerated && !showConfig);
 
   // State for generated pivot data
   const [generatedPivotData, setGeneratedPivotData] = useState([]);
@@ -386,23 +389,75 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
 
   // Export to Excel function
   const exportToExcel = () => {
-    if (hotTableRef.current && hotTableRef.current.hotInstance) {
-      const exportPlugin =
-        hotTableRef.current.hotInstance.getPlugin("exportFile");
-      if (exportPlugin) {
-        exportPlugin.downloadFile("xlsx", {
-          bom: false,
-          columnDelimiter: ",",
-          columnHeaders: true,
-          exportHiddenColumns: true,
-          exportHiddenRows: true,
-          fileExtension: "xlsx",
-          filename: "pivot-table-data_[YYYY]-[MM]-[DD]",
-          mimeType:
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          rowDelimiter: "\r\n",
-          rowHeaders: true,
-        });
+    try {
+      if (!generatedPivotData || generatedPivotData.length === 0) {
+        console.error("No pivot data available for export");
+        return;
+      }
+
+      // Create a simple Excel-compatible CSV with proper formatting
+      const headers = Object.keys(generatedPivotData[0]);
+      const csvContent = [
+        // Add headers
+        headers.join(","),
+        // Add data rows
+        ...generatedPivotData.map(row => 
+          headers.map(header => {
+            const value = row[header];
+            // Escape commas and quotes in CSV
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value || '';
+          }).join(",")
+        )
+      ].join("\n");
+
+      // Create blob with Excel-compatible MIME type
+      const blob = new Blob([csvContent], { 
+        type: "application/vnd.ms-excel;charset=utf-8;" 
+      });
+      
+      // Create download link
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      
+      // Generate filename with current date
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      link.download = `pivot-table-data_${dateStr}.xls`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log("Excel export completed successfully");
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      // Fallback: try the original Handsontable method
+      if (hotTableRef.current && hotTableRef.current.hotInstance) {
+        const exportPlugin = hotTableRef.current.hotInstance.getPlugin("exportFile");
+        if (exportPlugin) {
+          try {
+            exportPlugin.downloadFile("csv", {
+              bom: false,
+              columnDelimiter: ",",
+              columnHeaders: true,
+              exportHiddenColumns: true,
+              exportHiddenRows: true,
+              fileExtension: "csv",
+              filename: "pivot-table-data_[YYYY]-[MM]-[DD]",
+              mimeType: "text/csv",
+              rowDelimiter: "\r\n",
+              rowHeaders: true,
+            });
+          } catch (fallbackError) {
+            console.error("Fallback export also failed:", fallbackError);
+          }
+        }
       }
     }
   };
@@ -421,6 +476,7 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
     console.log("Setting pivot config and marking as generated");
     setPivotConfig(config);
     setIsGenerated(true);
+    setShowConfig(false); // Hide config panel when generating new pivot
     console.log("Pivot table generation initiated");
   };
 
@@ -429,13 +485,32 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
     setPivotConfig(null);
     setIsGenerated(false);
     setGeneratedPivotData([]);
+    setShowConfig(false);
+  };
+
+  // Handle back - go back to configuration panel to select different options
+  const handleBack = () => {
+    console.log("Going back to pivot configuration");
+    console.log("Current state before reset:", {
+      pivotConfig,
+      isGenerated,
+      generatedPivotDataLength: generatedPivotData.length,
+      externalPivotConfig,
+      showConfig
+    });
+    
+    // Set showConfig to true to force showing the configuration panel
+    setShowConfig(true);
+    
+    console.log("Back button clicked - showing configuration panel");
   };
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
       {/* Use the PivotConfigPanel component */}
-      {data && data.length > 0 && !effectiveIsGenerated && (
+      {data && data.length > 0 && (!effectiveIsGenerated || showConfig) && (
         <PivotConfigPanel
+          key={`pivot-config-${isGenerated}-${generatedPivotData.length}-${showConfig}`}
           columns={columns}
           onDataGenerate={handleDataGenerate}
           onCancel={handleCancel}
@@ -444,19 +519,33 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
 
       {/* Export buttons - only show when there's data and pivot table is generated */}
       {effectiveIsGenerated && generatedPivotData.length > 0 && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-end space-x-2">
-          <button
-            onClick={exportToCSV}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-sm"
-          >
-            Export to CSV
-          </button>
-          <button
-            onClick={exportToExcel}
-            className="px-4 py-2 bg-geniusAquamarine text-black rounded hover:bg-geniusAquamarine/80 transition-colors text-sm"
-          >
-            Export to Excel
-          </button>
+        <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+          <div className="flex space-x-2">
+            <button
+              onClick={handleBack}
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors text-sm flex items-center space-x-1"
+              title="Go back to select different pivot options"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Back</span>
+            </button>
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={exportToCSV}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-sm"
+            >
+              Export to CSV
+            </button>
+            <button
+              onClick={exportToExcel}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm"
+            >
+              Export to Excel
+            </button>
+          </div>
         </div>
       )}
 

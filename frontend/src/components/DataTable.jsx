@@ -63,6 +63,7 @@ const DataTable = ({
   const [columnMultiSelectValues, setColumnMultiSelectValues] = useState({});
   const [showColumnToggle, setShowColumnToggle] = useState(false);
   const showColumnToggleRef = useRef(false);
+  const isManuallyToggling = useRef(false); // Track when user is manually toggling columns
 
   // Site filtering logic - filter data based on showFullSites prop
   const filteredData = useMemo(() => {
@@ -98,6 +99,8 @@ const DataTable = ({
   const dropdownRefs = useRef({});
   const columnToggleRef = useRef(null);
   const initialFiltersApplied = useRef(false);
+  const initialPaginationApplied = useRef(false);
+  const lastInitialFilters = useRef(null); // Track the last applied initialFilters
 
   // Debugging logs
   console.log("DataTable: Component called with props", {
@@ -171,10 +174,17 @@ const DataTable = ({
 
   // Apply column visibility based on selected columns
   useEffect(() => {
+    // Skip this update if user is manually toggling columns to prevent loop
+    if (isManuallyToggling.current) {
+      console.log("DataTable: Skipping column visibility update - user is manually toggling");
+      return;
+    }
+    
     console.log("DataTable: Column visibility useEffect triggered", {
       columnsLength: columns?.length,
       selectedColumns,
-      selectedColumnsLength: selectedColumns?.length
+      selectedColumnsLength: selectedColumns?.length,
+      isManuallyToggling: isManuallyToggling.current
     });
     
     if (columns && columns.length > 0) {
@@ -449,11 +459,30 @@ const DataTable = ({
       initialFilters,
       hasInitialFilters: initialFilters && Object.keys(initialFilters).length > 0,
       currentColumnFilters: columnFilters,
-      initialFiltersApplied: initialFiltersApplied.current
+      initialFiltersApplied: initialFiltersApplied.current,
+      lastInitialFilters: lastInitialFilters.current,
+      stringifiedInitialFilters: JSON.stringify(initialFilters),
+      stringifiedLastInitialFilters: JSON.stringify(lastInitialFilters.current)
     });
     
-    if (initialFilters && Object.keys(initialFilters).length > 0 && !initialFiltersApplied.current) {
+    // Check if initialFilters has changed from what was last applied
+    const filtersChanged = JSON.stringify(initialFilters) !== JSON.stringify(lastInitialFilters.current);
+    console.log("DataTable: Filter comparison result:", { filtersChanged });
+    
+    // Reset the flag when initialFilters becomes empty (e.g., when switching views)
+    if (!initialFilters || Object.keys(initialFilters).length === 0) {
+      if (filtersChanged) {
+        console.log("DataTable: No initial filters to apply, resetting flag");
+        initialFiltersApplied.current = false;
+        lastInitialFilters.current = null; // Set to null instead of empty object
+      }
+      return;
+    }
+    
+    // Only apply initial filters if they haven't been applied yet OR if they have changed
+    if (!initialFiltersApplied.current || filtersChanged) {
       console.log("DataTable: Applying initial filters", initialFilters);
+      console.log("DataTable: Filters changed:", filtersChanged, "Already applied:", initialFiltersApplied.current);
       
       const newColumnFilters = [];
       // Don't apply global filter from initialFilters - let user control global search
@@ -464,11 +493,29 @@ const DataTable = ({
           // Skip global filter from initialFilters - we want user to control this
           console.log("DataTable: Skipping global filter from initialFilters to allow user control");
         } else if (filterValues && filterValues.length > 0) {
-          newColumnFilters.push({
-            id: columnId,
-            value: filterValues
-          });
-          console.log(`DataTable: Adding column filter for ${columnId}:`, filterValues);
+          console.log(`DataTable: Processing filter for column ${columnId}:`, filterValues);
+          console.log("DataTable: Available column IDs:", columns.map(c => c.accessorKey));
+          
+          // Find matching column by checking both accessorKey and header
+          const matchingColumn = columns.find(col => 
+            col.accessorKey === columnId || 
+            col.accessorKey?.toLowerCase() === columnId.toLowerCase() ||
+            (col.header && col.header.toLowerCase() === columnId.toLowerCase())
+          );
+          
+          if (matchingColumn) {
+            console.log(`DataTable: Found matching column - using ${matchingColumn.accessorKey} for filter on ${columnId}`);
+            newColumnFilters.push({
+              id: matchingColumn.accessorKey, // Use the actual accessorKey
+              value: filterValues
+            });
+          } else {
+            console.warn(`DataTable: No matching column found for filter column ${columnId}, using as-is`);
+            newColumnFilters.push({
+              id: columnId,
+              value: filterValues
+            });
+          }
         }
       });
       
@@ -487,9 +534,8 @@ const DataTable = ({
       setColumnMultiSelectValues(newMultiSelectValues);
       
       initialFiltersApplied.current = true;
-    } else if (!initialFilters || Object.keys(initialFilters).length === 0) {
-      console.log("DataTable: No initial filters to apply");
-      initialFiltersApplied.current = false;
+      lastInitialFilters.current = JSON.parse(JSON.stringify(initialFilters)); // Deep copy
+      console.log("DataTable: Set lastInitialFilters.current to:", lastInitialFilters.current);
     } else {
       console.log("DataTable: Initial filters already applied, skipping");
     }
@@ -508,16 +554,28 @@ const DataTable = ({
 
   // ✅ Fixed missing setPageSize state - Apply initial pagination configuration
   useEffect(() => {
-    if (initialPaginationConfig) {
+    console.log("DataTable: Initial pagination config useEffect triggered", {
+      initialPaginationConfig,
+      hasInitialPaginationConfig: initialPaginationConfig && (initialPaginationConfig.pageSize || initialPaginationConfig.currentPage),
+      currentPagination: pagination,
+      initialPaginationApplied: initialPaginationApplied.current
+    });
+    
+    // Only apply initial pagination if it hasn't been applied yet
+    if (initialPaginationConfig && (initialPaginationConfig.pageSize || initialPaginationConfig.currentPage) && !initialPaginationApplied.current) {
       console.log("DataTable: Applying initial pagination config", initialPaginationConfig);
-      if (initialPaginationConfig.pageSize || initialPaginationConfig.currentPage) {
-        setPagination(prev => ({
-          pageIndex: initialPaginationConfig.currentPage ? initialPaginationConfig.currentPage - 1 : prev.pageIndex, // Convert to 0-based index
-          pageSize: initialPaginationConfig.pageSize || prev.pageSize
-        }));
-      }
+      setPagination(prev => ({
+        pageIndex: initialPaginationConfig.currentPage ? initialPaginationConfig.currentPage - 1 : prev.pageIndex, // Convert to 0-based index
+        pageSize: initialPaginationConfig.pageSize || prev.pageSize
+      }));
+      initialPaginationApplied.current = true;
+    } else if (!initialPaginationConfig || (!initialPaginationConfig.pageSize && !initialPaginationConfig.currentPage)) {
+      console.log("DataTable: No initial pagination to apply, resetting flag");
+      initialPaginationApplied.current = false;
+    } else if (initialPaginationApplied.current) {
+      console.log("DataTable: Initial pagination already applied, skipping");
     }
-  }, [initialPaginationConfig]);
+  }, [initialPaginationConfig, pagination]);
 
   // Monitor global filter changes
   useEffect(() => {
@@ -794,6 +852,8 @@ const DataTable = ({
       console.log("DataTable: New columnMultiSelectValues after clear:", newValues);
       return newValues;
     });
+    
+    // Don't reset initialFiltersApplied flag - allow user to freely clear filters
   };
 
   // Calculate column size with fallback to default width
@@ -1078,12 +1138,28 @@ const DataTable = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        
+                        // Set manual toggle flag to prevent useEffect from interfering
+                        isManuallyToggling.current = true;
+                        
                         // Select all columns
                         const newVisibility = {};
                         table.getAllLeafColumns().forEach((column) => {
                           newVisibility[column.id] = true;
                         });
                         setColumnVisibility(newVisibility);
+                        
+                        // Immediately notify parent of the change
+                        if (onSelectedColumnsChange) {
+                          const visibleColumns = Object.keys(newVisibility);
+                          console.log("DataTable: Select All - notifying parent of selected columns:", visibleColumns);
+                          onSelectedColumnsChange(visibleColumns);
+                        }
+                        
+                        // Clear manual toggle flag after a short delay
+                        setTimeout(() => {
+                          isManuallyToggling.current = false;
+                        }, 100);
                       }}
                       className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
                     >
@@ -1092,6 +1168,10 @@ const DataTable = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        
+                        // Set manual toggle flag to prevent useEffect from interfering
+                        isManuallyToggling.current = true;
+                        
                         // Deselect all columns (but keep at least one)
                         const allColumns = table.getAllLeafColumns();
                         const newVisibility = {};
@@ -1102,6 +1182,20 @@ const DataTable = ({
                         });
 
                         setColumnVisibility(newVisibility);
+                        
+                        // Immediately notify parent of the change
+                        if (onSelectedColumnsChange) {
+                          const visibleColumns = Object.keys(newVisibility).filter(
+                            (key) => newVisibility[key]
+                          );
+                          console.log("DataTable: Deselect All - notifying parent of selected columns:", visibleColumns);
+                          onSelectedColumnsChange(visibleColumns);
+                        }
+                        
+                        // Clear manual toggle flag after a short delay
+                        setTimeout(() => {
+                          isManuallyToggling.current = false;
+                        }, 100);
                       }}
                       className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200"
                     >
@@ -1119,12 +1213,30 @@ const DataTable = ({
                         checked={column.getIsVisible()}
                         onChange={(e) => {
                           e.stopPropagation();
-                          // Use a custom handler that doesn't trigger parent callbacks immediately
+                          
+                          // Set manual toggle flag to prevent useEffect from interfering
+                          isManuallyToggling.current = true;
+                          
+                          // Update visibility state
                           const newVisibility = {
                             ...columnVisibility,
                             [column.id]: e.target.checked
                           };
                           setColumnVisibility(newVisibility);
+                          
+                          // Immediately notify parent of the change
+                          if (onSelectedColumnsChange) {
+                            const visibleColumns = Object.keys(newVisibility).filter(
+                              (key) => newVisibility[key]
+                            );
+                            console.log("DataTable: Column toggle - notifying parent of selected columns:", visibleColumns);
+                            onSelectedColumnsChange(visibleColumns);
+                          }
+                          
+                          // Clear manual toggle flag after a short delay to allow state updates
+                          setTimeout(() => {
+                            isManuallyToggling.current = false;
+                          }, 100);
                         }}
                         className="mr-2 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />

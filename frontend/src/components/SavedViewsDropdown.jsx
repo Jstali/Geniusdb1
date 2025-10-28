@@ -70,28 +70,35 @@ const SavedViewsDropdown = ({ onLoadView }) => {
         return;
       }
 
-      // Apply the loaded view configuration
+      // Parse all saved configurations
+      const savedFilters = data.filters ? JSON.parse(data.filters) : {};
+      const savedChartConfig = data.chart_config
+        ? JSON.parse(data.chart_config)
+        : { type: "bar", xAxis: "", yAxis: "" };
+      const savedMapConfig = data.map_config
+        ? JSON.parse(data.map_config)
+        : { locationColumn: "Site Name", showMarkers: true, markerFilter: [] };
+      const savedSortConfig = data.sort_config
+        ? JSON.parse(data.sort_config)
+        : { sortBy: [], sortDirection: "asc" };
+      const savedPaginationConfig = data.pagination_config
+        ? JSON.parse(data.pagination_config)
+        : { pageSize: 10, currentPage: 1 };
+
+      // Apply the loaded view configuration with all saved state
       const viewConfig = {
         tableView: {
           selectedColumns: data.selected_columns
             ? data.selected_columns.split(",")
             : [],
-          filters: data.filters ? JSON.parse(data.filters) : {},
+          filters: savedFilters,
+          sortBy: savedSortConfig.sortBy,
+          sortDirection: savedSortConfig.sortDirection,
+          pageSize: savedPaginationConfig.pageSize,
+          currentPage: savedPaginationConfig.currentPage,
         },
-        chartView: data.chart_config
-          ? JSON.parse(data.chart_config)
-          : {
-              type: "bar",
-              xAxis: "",
-              yAxis: "",
-            },
-        mapView: data.map_config
-          ? JSON.parse(data.map_config)
-          : {
-              locationColumn: "Site Name",
-              showMarkers: true,
-              markerFilter: [],
-            },
+        chartView: savedChartConfig,
+        mapView: savedMapConfig,
         viewName: view.name || `View ${view.slot}`, // Add view name to config
       };
 

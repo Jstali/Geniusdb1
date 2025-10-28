@@ -207,13 +207,23 @@ const HomePage = ({
   // Handle filter changes from DataTable
   const handleFiltersChange = (filters) => {
     console.log("HomePage: Received filter changes from DataTable", filters);
+    console.log("HomePage: Current activeView:", activeView);
+    console.log("HomePage: Current tableViewConfig.filters:", tableViewConfig?.filters);
     setTableFilters(filters);
     
-    // Update tableViewConfig with current filters
-    setTableViewConfig(prev => ({
-      ...prev,
-      filters: filters
-    }));
+    // Always update filters in tableViewConfig so View Management modal can see them
+    // The filter isolation by view is handled when saving views, not when applying filters
+    console.log("HomePage: Updating filters in tableViewConfig");
+    console.log("HomePage: Old filters:", tableViewConfig?.filters);
+    console.log("HomePage: New filters:", filters);
+    setTableViewConfig(prev => {
+      const updated = {
+        ...prev,
+        filters: filters
+      };
+      console.log("HomePage: Updated tableViewConfig:", updated);
+      return updated;
+    });
   };
 
   // Calculate summary statistics based on filtered data

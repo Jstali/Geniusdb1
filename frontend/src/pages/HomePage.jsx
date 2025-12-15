@@ -407,7 +407,6 @@ const HomePage = ({
           </div>
         ) : (
         <DataTable
-          key={`table-${showFullSites}`}
           data={data} // Pass full dataset to table
           columns={columns}
           selectedColumns={tableViewConfig?.selectedColumns || []} // Pass empty array when no columns selected

@@ -5,6 +5,7 @@ const ViewManagementModal = ({
   onClose,
   onLoadView,
   currentTableView,
+  currentChartConfig = null,
   allColumns = [],
   activeView = null,
 }) => {
@@ -23,6 +24,14 @@ const ViewManagementModal = ({
 
   // Get API base URL from environment or default to localhost:8000
   const API_BASE = (window._env_ && window._env_.API_BASE) || "";
+
+  // Sync chart config from parent when modal opens
+  useEffect(() => {
+    if (isOpen && currentChartConfig && !selectedSlot) {
+      console.log("ViewManagementModal: Syncing chart config from parent:", currentChartConfig);
+      setChartConfig(currentChartConfig);
+    }
+  }, [isOpen, currentChartConfig, selectedSlot]);
 
   // Debug: Log currentTableView changes and sync with viewFilters
   useEffect(() => {
@@ -93,17 +102,21 @@ const ViewManagementModal = ({
           setViewFilters({});
         }
       } else {
-        // Reset to defaults
+        // No saved view - use current chart config from parent
         setViewName(`View ${selectedSlot}`);
-        setChartConfig({
-          type: "bar",
-          xAxis: "",
-          yAxis: "",
-        });
+        if (currentChartConfig) {
+          setChartConfig(currentChartConfig);
+        } else {
+          setChartConfig({
+            type: "bar",
+            xAxis: "",
+            yAxis: "",
+          });
+        }
         setViewFilters({});
       }
     }
-  }, [selectedSlot, isOpen, views]);
+  }, [selectedSlot, isOpen, views, currentChartConfig]);
 
   const fetchViews = async () => {
     try {
@@ -226,13 +239,11 @@ const ViewManagementModal = ({
       setSuccess("");
 
       // Build enhanced payload with all required state
-      // Use viewFilters (stored filters for this specific view slot) when saving
-      // This ensures each view slot maintains its own isolated filter state
-      const filtersToSave = viewFilters;
+      // Use currentTableView.filters directly - these are the actual filters applied in the table
+      const filtersToSave = currentTableView?.filters || {};
       
       console.log("Saving filters for view slot", selectedSlot, ":", filtersToSave);
       console.log("Current tableView filters:", currentTableView?.filters);
-      console.log("Stored viewFilters:", viewFilters);
       
       const payload = {
         name: viewName,
@@ -626,6 +637,7 @@ const ViewManagementModal = ({
                         ))}
                       </select>
                     </div>
+                    {chartConfig.type !== "pie" && (
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
                         Y-Axis
@@ -645,6 +657,7 @@ const ViewManagementModal = ({
                         ))}
                       </select>
                     </div>
+                    )}
                   </div>
                 </div>
               </div>

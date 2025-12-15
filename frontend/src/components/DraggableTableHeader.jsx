@@ -215,13 +215,17 @@ const DraggableHeaderCell = ({
 
                   {/* Individual Options */}
                   {getUniqueValues(columnId).map((value) => (
-                    <div key={value} className="mb-1">
+                    <div key={String(value)} className="mb-1">
                       <label className="flex items-center">
                         <input
                           type="checkbox"
                           checked={
-                            columnMultiSelectValues[columnId]?.includes(value) ||
-                            false
+                            columnMultiSelectValues[columnId]?.some(v => {
+                              const vNum = parseFloat(v);
+                              const valNum = parseFloat(value);
+                              if (!isNaN(vNum) && !isNaN(valNum)) return vNum === valNum;
+                              return String(v) === String(value);
+                            }) || false
                           }
                           onChange={(e) =>
                             handleMultiSelectChange(

@@ -5,6 +5,7 @@ import {
   Marker,
   InfoWindow,
 } from "@react-google-maps/api";
+import { getGoogleMapsApiKey } from "../config/googleMaps";
 
 // Map container style
 const containerStyle = {
@@ -51,15 +52,18 @@ const GoogleMapComponent = ({
   const [markersInitialized, setMarkersInitialized] = useState(false);
 
   // Get Google Maps API key from environment
-  const GOOGLE_MAPS_API_KEY =
-    (window._env_ && window._env_.VITE_GOOGLE_MAPS_API_KEY) || "";
+  const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey();
 
   // Debug logging
   console.log(
-    "GoogleMapComponent: Google Maps API Key:",
-    GOOGLE_MAPS_API_KEY ? "Present" : "Missing"
+    "GoogleMapComponent: Google Maps API Key source:",
+    GOOGLE_MAPS_API_KEY ? "Resolved" : "Missing"
   );
-  console.log("GoogleMapComponent: window._env_:", window._env_);
+  if (!GOOGLE_MAPS_API_KEY) {
+    console.warn(
+      "GoogleMapComponent: Google Maps API key is missing. Set VITE_GOOGLE_MAPS_API_KEY in `.env.local` or provide it through runtime config."
+    );
+  }
 
   // Load Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({

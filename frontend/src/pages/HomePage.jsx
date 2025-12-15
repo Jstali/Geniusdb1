@@ -204,26 +204,30 @@ const HomePage = ({
     console.log("🟢 HomePage: filteredTableData state updated to", filteredData.length, "items - map should update now");
   };
 
-  // Handle filter changes from DataTable
+  // Handle filter changes from DataTable (user-applied filters only)
   const handleFiltersChange = (filters) => {
     console.log("HomePage: Received filter changes from DataTable", filters);
-    console.log("HomePage: Current activeView:", activeView);
-    console.log("HomePage: Current tableViewConfig.filters:", tableViewConfig?.filters);
     setTableFilters(filters);
     
-    // Always update filters in tableViewConfig so View Management modal can see them
-    // The filter isolation by view is handled when saving views, not when applying filters
-    console.log("HomePage: Updating filters in tableViewConfig");
-    console.log("HomePage: Old filters:", tableViewConfig?.filters);
-    console.log("HomePage: New filters:", filters);
-    setTableViewConfig(prev => {
-      const updated = {
+    // Only update tableViewConfig.filters if user manually changed filters
+    // Don't overwrite if the current filters came from a saved view and DataTable reports empty
+    const currentFilters = tableViewConfig?.filters || {};
+    const hasCurrentFilters = Object.keys(currentFilters).length > 0;
+    const hasNewFilters = Object.keys(filters).length > 0;
+    
+    // Update only if: user added filters OR user cleared filters (had filters before, now empty)
+    if (hasNewFilters || (hasCurrentFilters && !hasNewFilters && Object.keys(filters).length === 0)) {
+      // Check if this is just DataTable initializing with empty filters - don't overwrite saved view filters
+      if (!hasNewFilters && hasCurrentFilters) {
+        console.log("HomePage: Skipping filter update - keeping saved view filters");
+        return;
+      }
+      
+      setTableViewConfig(prev => ({
         ...prev,
         filters: filters
-      };
-      console.log("HomePage: Updated tableViewConfig:", updated);
-      return updated;
-    });
+      }));
+    }
   };
 
   // Calculate summary statistics based on filtered data
@@ -403,7 +407,7 @@ const HomePage = ({
           </div>
         ) : (
         <DataTable
-          key={`table-${activeView || 'default'}-${showFullSites}`} // Re-render when site filtering changes
+          key={`table-${showFullSites}`}
           data={data} // Pass full dataset to table
           columns={columns}
           selectedColumns={tableViewConfig?.selectedColumns || []} // Pass empty array when no columns selected

@@ -177,7 +177,19 @@ const SavedViewsDropdown = ({ onLoadView }) => {
       <button
         onClick={toggleDropdown}
         disabled={loading}
-        className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition text-sm font-medium ml-2"
+        className="px-4 py-2 text-white rounded-md font-medium text-sm uppercase tracking-wide transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+        style={{
+          backgroundColor: "#8B5CF6",
+          boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.backgroundColor = "#A78BFA";
+          e.target.style.boxShadow = "0 6px 20px rgba(139, 92, 246, 0.4)";
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.backgroundColor = "#8B5CF6";
+          e.target.style.boxShadow = "0 4px 12px rgba(139, 92, 246, 0.3)";
+        }}
       >
         {loading ? "Loading..." : "Saved Views"}
       </button>

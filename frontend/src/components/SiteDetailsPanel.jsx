@@ -329,7 +329,7 @@ const SiteDetailsPanel = ({ selectedSite, summaryStats, onClose }) => {
                 className="font-medium"
                 style={{ color: "rgba(3, 3, 4, 0.7)" }}
               >
-                Generative Capacity:
+                Generation Capacity:
               </span>
               <span className="font-medium" style={{ color: "#412234" }}>
                 {genCapacity !== null && genCapacity !== undefined

@@ -89,16 +89,18 @@ const Header = ({
                 onClick={() => onNavigate("View Management")}
                 className="px-4 py-2 text-white rounded-md font-medium text-sm uppercase tracking-wide transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
                 style={{
-                  backgroundColor: "#412234",
-                  boxShadow: "0 4px 12px rgba(65, 34, 52, 0.3)",
+                  backgroundColor: "#6366F1",
+                  boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
                 }}
                 onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = "#7C3AED";
                   e.target.style.boxShadow =
-                    "0 6px 20px rgba(65, 34, 52, 0.4)";
+                    "0 6px 20px rgba(99, 102, 241, 0.4)";
                 }}
                 onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = "#6366F1";
                   e.target.style.boxShadow =
-                    "0 4px 12px rgba(65, 34, 52, 0.3)";
+                    "0 4px 12px rgba(99, 102, 241, 0.3)";
                 }}
               >
                 View Management
@@ -117,18 +119,18 @@ const Header = ({
                   onClick={onLogout}
                   className="px-4 py-2 text-white rounded-md font-medium text-sm uppercase tracking-wide transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
                   style={{
-                    backgroundColor: "#FF6B6B",
-                    boxShadow: "0 4px 12px rgba(255, 107, 107, 0.3)",
+                    backgroundColor: "#F43F5E",
+                    boxShadow: "0 4px 12px rgba(244, 63, 94, 0.3)",
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = "#FF7276";
+                    e.target.style.backgroundColor = "#FB7185";
                     e.target.style.boxShadow =
-                      "0 6px 20px rgba(255, 107, 107, 0.4)";
+                      "0 6px 20px rgba(244, 63, 94, 0.4)";
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = "#FF6B6B";
+                    e.target.style.backgroundColor = "#F43F5E";
                     e.target.style.boxShadow =
-                      "0 4px 12px rgba(255, 107, 107, 0.3)";
+                      "0 4px 12px rgba(244, 63, 94, 0.3)";
                   }}
                 >
                   Logout
@@ -138,18 +140,18 @@ const Header = ({
                   onClick={() => onNavigate("Login")}
                   className="px-4 py-2 text-white rounded-md font-medium text-sm uppercase tracking-wide transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
                   style={{
-                    backgroundColor: "#FF6B6B",
-                    boxShadow: "0 4px 12px rgba(255, 107, 107, 0.3)",
+                    backgroundColor: "#F43F5E",
+                    boxShadow: "0 4px 12px rgba(244, 63, 94, 0.3)",
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = "#FF7276";
+                    e.target.style.backgroundColor = "#FB7185";
                     e.target.style.boxShadow =
-                      "0 6px 20px rgba(255, 107, 107, 0.4)";
+                      "0 6px 20px rgba(244, 63, 94, 0.4)";
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = "#FF6B6B";
+                    e.target.style.backgroundColor = "#F43F5E";
                     e.target.style.boxShadow =
-                      "0 4px 12px rgba(255, 107, 107, 0.3)";
+                      "0 4px 12px rgba(244, 63, 94, 0.3)";
                   }}
                 >
                   Sign Up

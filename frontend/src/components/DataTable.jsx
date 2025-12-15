@@ -420,15 +420,26 @@ const DataTable = ({
       multiSelect: (row, columnId, filterValues) => {
         if (!filterValues || filterValues.length === 0) return true;
         const cellValue = row.getValue(columnId);
-        // Handle different data types
+        
         if (Array.isArray(filterValues)) {
-          return filterValues.some((val) =>
-            String(cellValue).toLowerCase().includes(String(val).toLowerCase())
-          );
+          return filterValues.some((val) => {
+            // Try numeric comparison first
+            const cellNum = parseFloat(cellValue);
+            const filterNum = parseFloat(val);
+            if (!isNaN(cellNum) && !isNaN(filterNum)) {
+              return cellNum === filterNum;
+            }
+            // Fall back to string comparison
+            return String(cellValue).toLowerCase().trim() === String(val).toLowerCase().trim();
+          });
         }
-        return String(cellValue)
-          .toLowerCase()
-          .includes(String(filterValues).toLowerCase());
+        
+        const cellNum = parseFloat(cellValue);
+        const filterNum = parseFloat(filterValues);
+        if (!isNaN(cellNum) && !isNaN(filterNum)) {
+          return cellNum === filterNum;
+        }
+        return String(cellValue).toLowerCase().trim() === String(filterValues).toLowerCase().trim();
       },
     },
     columnResizeMode: "onChange", // Enable real-time column resizing
@@ -453,93 +464,60 @@ const DataTable = ({
     }
   }, [table, onFilteredDataChange, filteredData.length, columnFilters, globalFilter, sorting, columnVisibility, showFullSites]);
 
-  // Apply initial filters when they change (only once per initialFilters change)
+  // Stringify initialFilters for dependency comparison
+  const initialFiltersKey = JSON.stringify(initialFilters);
+  
+  // Apply initial filters when component mounts or initialFilters/columns change
   useEffect(() => {
-    console.log("DataTable: Initial filters useEffect triggered", {
-      initialFilters,
-      hasInitialFilters: initialFilters && Object.keys(initialFilters).length > 0,
-      currentColumnFilters: columnFilters,
-      initialFiltersApplied: initialFiltersApplied.current,
-      lastInitialFilters: lastInitialFilters.current,
-      stringifiedInitialFilters: JSON.stringify(initialFilters),
-      stringifiedLastInitialFilters: JSON.stringify(lastInitialFilters.current)
-    });
+    console.log("DataTable useEffect TRIGGERED: initialFilters=", initialFilters, "columns.length=", columns?.length);
     
-    // Check if initialFilters has changed from what was last applied
-    const filtersChanged = JSON.stringify(initialFilters) !== JSON.stringify(lastInitialFilters.current);
-    console.log("DataTable: Filter comparison result:", { filtersChanged });
-    
-    // Reset the flag when initialFilters becomes empty (e.g., when switching views)
-    if (!initialFilters || Object.keys(initialFilters).length === 0) {
-      if (filtersChanged) {
-        console.log("DataTable: No initial filters to apply, resetting flag");
-        initialFiltersApplied.current = false;
-        lastInitialFilters.current = null; // Set to null instead of empty object
-      }
+    // Wait for columns to be available
+    if (!columns || columns.length === 0) {
+      console.log("DataTable: No columns yet, skipping filter application");
       return;
     }
     
-    // Only apply initial filters if they haven't been applied yet OR if they have changed
-    if (!initialFiltersApplied.current || filtersChanged) {
-      console.log("DataTable: Applying initial filters", initialFilters);
-      console.log("DataTable: Filters changed:", filtersChanged, "Already applied:", initialFiltersApplied.current);
-      
-      const newColumnFilters = [];
-      // Don't apply global filter from initialFilters - let user control global search
-      // let newGlobalFilter = "";
-      
-      Object.entries(initialFilters).forEach(([columnId, filterValues]) => {
-        if (columnId === "_global") {
-          // Skip global filter from initialFilters - we want user to control this
-          console.log("DataTable: Skipping global filter from initialFilters to allow user control");
-        } else if (filterValues && filterValues.length > 0) {
-          console.log(`DataTable: Processing filter for column ${columnId}:`, filterValues);
-          console.log("DataTable: Available column IDs:", columns.map(c => c.accessorKey));
-          
-          // Find matching column by checking both accessorKey and header
-          const matchingColumn = columns.find(col => 
-            col.accessorKey === columnId || 
-            col.accessorKey?.toLowerCase() === columnId.toLowerCase() ||
-            (col.header && col.header.toLowerCase() === columnId.toLowerCase())
-          );
-          
-          if (matchingColumn) {
-            console.log(`DataTable: Found matching column - using ${matchingColumn.accessorKey} for filter on ${columnId}`);
-            newColumnFilters.push({
-              id: matchingColumn.accessorKey, // Use the actual accessorKey
-              value: filterValues
-            });
-          } else {
-            console.warn(`DataTable: No matching column found for filter column ${columnId}, using as-is`);
-            newColumnFilters.push({
-              id: columnId,
-              value: filterValues
-            });
-          }
-        }
-      });
-      
-      console.log("DataTable: Final column filters:", newColumnFilters);
-      console.log("DataTable: Skipping global filter to allow user search control");
-      
-      setColumnFilters(newColumnFilters);
-      // Don't set global filter from initialFilters
-      // setGlobalFilter(newGlobalFilter);
-      
-      // Update multi-select values for UI consistency
-      const newMultiSelectValues = {};
-      newColumnFilters.forEach(filter => {
-        newMultiSelectValues[filter.id] = filter.value;
-      });
-      setColumnMultiSelectValues(newMultiSelectValues);
-      
-      initialFiltersApplied.current = true;
-      lastInitialFilters.current = JSON.parse(JSON.stringify(initialFilters)); // Deep copy
-      console.log("DataTable: Set lastInitialFilters.current to:", lastInitialFilters.current);
-    } else {
-      console.log("DataTable: Initial filters already applied, skipping");
+    // Skip if no initial filters
+    if (!initialFilters || Object.keys(initialFilters).length === 0) {
+      console.log("DataTable: No initial filters to apply");
+      return;
     }
-  }, [initialFilters]);
+    
+    console.log("DataTable: Applying initial filters NOW", initialFilters);
+    
+    const newColumnFilters = [];
+    
+    Object.entries(initialFilters).forEach(([columnId, filterValues]) => {
+      if (columnId === "_global" || !filterValues || filterValues.length === 0) {
+        return;
+      }
+      
+      // Find matching column (case-insensitive)
+      const matchingColumn = columns.find(col => 
+        col.accessorKey === columnId || 
+        col.accessorKey?.toLowerCase() === columnId.toLowerCase()
+      );
+      
+      const actualColumnId = matchingColumn ? matchingColumn.accessorKey : columnId;
+      console.log("DataTable: Filter -", actualColumnId, "=", filterValues);
+      
+      newColumnFilters.push({
+        id: actualColumnId,
+        value: filterValues
+      });
+    });
+    
+    console.log("DataTable: Setting columnFilters to", newColumnFilters);
+    setColumnFilters(newColumnFilters);
+    
+    const newMultiSelectValues = {};
+    newColumnFilters.forEach(filter => {
+      newMultiSelectValues[filter.id] = filter.value;
+    });
+    console.log("DataTable: Setting columnMultiSelectValues to", newMultiSelectValues);
+    setColumnMultiSelectValues(newMultiSelectValues);
+    
+  }, [initialFiltersKey, columns.length]);
 
   // Apply initial sort configuration
   useEffect(() => {
@@ -781,12 +759,24 @@ const DataTable = ({
           newValues = [];
         }
       } else {
+        // Helper for comparison
+        const valuesMatch = (v1, v2) => {
+          const n1 = parseFloat(v1);
+          const n2 = parseFloat(v2);
+          if (!isNaN(n1) && !isNaN(n2)) return n1 === n2;
+          return String(v1) === String(v2);
+        };
+        
         if (isChecked) {
-          // Add value to selection
-          newValues = [...currentValues, value];
+          // Add value to selection (avoid duplicates)
+          if (!currentValues.some(v => valuesMatch(v, value))) {
+            newValues = [...currentValues, value];
+          } else {
+            newValues = currentValues;
+          }
         } else {
           // Remove value from selection
-          newValues = currentValues.filter((v) => v !== value);
+          newValues = currentValues.filter((v) => !valuesMatch(v, value));
         }
       }
 

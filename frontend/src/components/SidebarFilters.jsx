@@ -244,10 +244,10 @@ const SidebarFilters = ({
             </select>
           </div>
 
-          {/* Available Power Range Input */}
+          {/* Generation Capacity Range Input */}
           <div>
                     <label className="block text-sm font-medium mb-2" style={{color: '#030304'}}>
-                      Available Power (MW)
+                      Generation Capacity (MW)
                     </label>
             <input
               type="number"
@@ -272,7 +272,7 @@ const SidebarFilters = ({
               value={currentFilters.powerRange?.min ?? 0}
               onChange={(e) => handlePowerRangeChange(e.target.value)}
             />
-            <p className="text-xs mt-1" style={{color: 'rgba(3, 3, 4, 0.5)'}}>Show sites with power ≥ this value</p>
+            <p className="text-xs mt-1" style={{color: 'rgba(3, 3, 4, 0.5)'}}>Show sites with capacity ≥ this value</p>
           </div>
 
           {/* Network Operators Filter */}

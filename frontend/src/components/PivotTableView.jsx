@@ -235,10 +235,9 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
         
         const missingFields = allConfigFields.filter(field => !dataKeys.includes(field));
         if (missingFields.length > 0) {
-          console.error("Missing fields in data:", missingFields);
-          console.error("Available fields:", dataKeys);
-          setGeneratedPivotData([]);
-          return;
+          console.warn("Missing fields in data (will be handled gracefully):", missingFields);
+          console.log("Available fields:", dataKeys);
+          // Don't return early - try to generate with available fields
         }
         
         const newPivotData = generatePivotData(data, effectivePivotConfig);
@@ -251,7 +250,8 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
           setGeneratedPivotData(newPivotData);
         } else {
           console.error("❌ Pivot data validation failed:", validation.issues);
-          setGeneratedPivotData([]);
+          // Still set the data even if validation failed - let user see what's available
+          setGeneratedPivotData(newPivotData);
         }
         
         // Log warnings even if validation passed
@@ -305,17 +305,49 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
       console.warn("Data quality issues found:", dataQualityIssues.slice(0, 5));
     }
 
-    const rowFields = config.rows;
-    const columnFields = config.columns || [];
-    const valueConfigs = config.values;
+    // Filter out fields that don't exist in the data
+    const availableRowFields = config.rows.filter(field => {
+      const exists = firstItem.hasOwnProperty(field);
+      if (!exists) {
+        console.warn(`Row field '${field}' not found in data, skipping`);
+      }
+      return exists;
+    });
+    
+    const availableColumnFields = (config.columns || []).filter(field => {
+      const exists = firstItem.hasOwnProperty(field);
+      if (!exists) {
+        console.warn(`Column field '${field}' not found in data, skipping`);
+      }
+      return exists;
+    });
+    
+    const availableValueConfigs = config.values.filter(valueConfig => {
+      const exists = firstItem.hasOwnProperty(valueConfig.field);
+      if (!exists) {
+        console.warn(`Value field '${valueConfig.field}' not found in data, skipping`);
+      }
+      return exists;
+    });
+
+    // If no valid fields remain, return empty result
+    if (availableRowFields.length === 0 || availableValueConfigs.length === 0) {
+      console.warn("No valid fields available for pivot generation");
+      return [];
+    }
+
+    console.log("Using available fields:");
+    console.log("Available rows:", availableRowFields);
+    console.log("Available columns:", availableColumnFields);
+    console.log("Available values:", availableValueConfigs);
 
     // Group data by row fields
-    const rowGroups = groupBy(data, rowFields);
+    const rowGroups = groupBy(data, availableRowFields);
     console.log("Row groups created:", Object.keys(rowGroups).length);
 
     // If no columns, create simple pivot
-    if (columnFields.length === 0) {
-      const result = createSimplePivot(rowGroups, rowFields, valueConfigs);
+    if (availableColumnFields.length === 0) {
+      const result = createSimplePivot(rowGroups, availableRowFields, availableValueConfigs);
       
       // Final duplicate check for simple pivot
       if (result.length > 0) {
@@ -332,7 +364,7 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
     }
 
     // Create cross-tabulation pivot
-    const result = createCrossTabPivot(rowGroups, rowFields, columnFields, valueConfigs, data);
+    const result = createCrossTabPivot(rowGroups, availableRowFields, availableColumnFields, availableValueConfigs, data);
     
     // Final duplicate check
     if (result.length > 0) {

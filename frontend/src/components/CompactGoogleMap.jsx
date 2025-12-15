@@ -83,7 +83,7 @@ const CompactGoogleMap = ({
       backendFilters["voltage_level"] = parseInt(frontendFilters.voltage);
     }
 
-    // Available Power filter - use >= operator as per requirements
+    // Generation Capacity filter - use >= operator as per requirements
     if (
       frontendFilters.powerRange &&
       frontendFilters.powerRange.min !== undefined &&

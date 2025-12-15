@@ -86,7 +86,7 @@ const MapSection = ({
       backendFilters["voltage_level"] = frontendFilters.voltage;
     }
 
-    // Available Power filter - use min value for >= comparison
+    // Generation Capacity filter - use min value for >= comparison
     if (
       frontendFilters.powerRange &&
       frontendFilters.powerRange.min !== undefined &&

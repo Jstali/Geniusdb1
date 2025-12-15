@@ -28,11 +28,41 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
       };
     }
 
+    // Find common numeric and categorical fields for better defaults
+    const numericFields = columnOptions.filter(col => {
+      const fieldName = col.value.toLowerCase();
+      return fieldName.includes('capacity') || 
+             fieldName.includes('power') || 
+             fieldName.includes('voltage') || 
+             fieldName.includes('rating') ||
+             fieldName.includes('demand') ||
+             fieldName.includes('headroom') ||
+             fieldName.includes('count') ||
+             fieldName.includes('mw') ||
+             fieldName.includes('mva');
+    });
+
+    const categoricalFields = columnOptions.filter(col => {
+      const fieldName = col.value.toLowerCase();
+      return fieldName.includes('site') || 
+             fieldName.includes('type') || 
+             fieldName.includes('county') || 
+             fieldName.includes('area') ||
+             fieldName.includes('operator') ||
+             fieldName.includes('classification') ||
+             fieldName.includes('status');
+    });
+
+    // Use categorical fields for rows, numeric fields for values
+    const defaultRows = categoricalFields.length > 0 ? [categoricalFields[0].value] : [columnOptions[0].value];
+    const defaultValues = numericFields.length > 0 ? [numericFields[0].value] : [columnOptions[0].value];
+    const defaultColumns = categoricalFields.length > 1 ? [categoricalFields[1].value] : [];
+
     return {
-      rows: columnOptions.length > 0 ? [columnOptions[0].value] : [],
-      columnsFields: columnOptions.length > 1 ? [columnOptions[1].value] : [],
-      values: columnOptions.length > 2 ? [columnOptions[2].value] : [],
-      aggregations: columnOptions.length > 2 ? ["SUM"] : [],
+      rows: defaultRows,
+      columnsFields: defaultColumns,
+      values: defaultValues,
+      aggregations: ["SUM"],
     };
   };
   const [error, setError] = useState("");
@@ -273,6 +303,11 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
       <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md border border-blue-200 text-sm">
         <strong>Debug Info:</strong> Rows: {rows.length}, Columns:{" "}
         {columnsFields.length}, Values: {values.length}
+        <br />
+        <strong>Available Columns:</strong> {columnOptions.length} total
+        <br />
+        <strong>Sample Columns:</strong> {columnOptions.slice(0, 5).map(col => col.label).join(", ")}
+        {columnOptions.length > 5 && "..."}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

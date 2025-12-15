@@ -46,6 +46,7 @@ const DynamicChartGenerator = ({
   chartConfig = null, // Add chartConfig prop for saved chart configuration
   generatedChart = null, // External chart state for persistence
   setGeneratedChart = null, // External chart state setter
+  setChartConfig = null, // Callback to update chart config in parent
 }) => {
   // State management for chart configuration
   const [chartType, setChartType] = useState("bar");
@@ -431,14 +432,24 @@ const DynamicChartGenerator = ({
     console.log("DynamicChartGenerator: Processed chart data:", chartData);
     
     if (chartData && setGeneratedChart) {
-      const chartConfig = {
+      const newChartConfig = {
         type: chartType,
         data: chartData,
         xAxis: xAxisColumn,
         yAxis: yAxisColumn,
       };
-      console.log("DynamicChartGenerator: Setting generated chart:", chartConfig);
-      setGeneratedChart(chartConfig);
+      console.log("DynamicChartGenerator: Setting generated chart:", newChartConfig);
+      setGeneratedChart(newChartConfig);
+      
+      // Also update parent's chart config for View Management
+      if (setChartConfig) {
+        setChartConfig({
+          type: chartType,
+          xAxis: xAxisColumn,
+          yAxis: yAxisColumn,
+        });
+      }
+      
       // Force chart re-render
       setChartKey(prev => prev + 1);
     } else {
@@ -452,6 +463,61 @@ const DynamicChartGenerator = ({
       setGeneratedChart(null);
     }
     setError("");
+  };
+
+  // Download chart data as CSV
+  const handleDownloadData = () => {
+    if (!generatedChart || !generatedChart.data) {
+      setError('No chart data available to download. Please generate a chart first.');
+      return;
+    }
+
+    try {
+      const data = generatedChart.data;
+      
+      // Create CSV header
+      let csvContent = "";
+      if (generatedChart.type === "pie") {
+        csvContent = "Category,Count,Percentage\n";
+        
+        // Calculate total for percentage
+        const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+        
+        // Add data rows
+        data.forEach(item => {
+          const percentage = total > 0 ? ((item.value / total) * 100).toFixed(2) : 0;
+          csvContent += `"${item.name}",${item.value},${percentage}%\n`;
+        });
+      } else {
+        // For bar, line, area, scatter charts
+        csvContent = `${generatedChart.xAxis},${generatedChart.yAxis}\n`;
+        
+        // Add data rows
+        data.forEach(item => {
+          csvContent += `"${item.name}",${item.value}\n`;
+        });
+      }
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `chart-data-${generatedChart.type}-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(url);
+      
+      console.log('Chart data downloaded successfully as CSV');
+    } catch (error) {
+      console.error('Error downloading chart data:', error);
+      setError('Failed to download chart data. Please try again.');
+    }
   };
 
   // New reliable PNG method using html-to-image
@@ -1339,6 +1405,16 @@ const DynamicChartGenerator = ({
     "ECR Capacity (MW)",
     colorPalette.warning
   );
+  const top10DemandCapacity = getTop10SitesByColumn(
+    "Max Demand Summer",
+    "Demand Capacity (MW)",
+    colorPalette.info
+  );
+  const top10FirmCapacity = getTop10SitesByColumn(
+    "Firm Capacity",
+    "Firm Capacity (MW)",
+    colorPalette.success
+  );
 
   // Default chart renderer
   const renderDefaultBarChart = (data, title, barColor) => (
@@ -1411,6 +1487,40 @@ const DynamicChartGenerator = ({
               top10ECRCapacity,
               "ECR Capacity (MW)",
               colorPalette.warning
+            )
+          ) : (
+            <div className="text-gray-500">No data available</div>
+          )}
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Top 10 Sites by Demand Capacity
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Sites with highest Max Demand Summer (MW)
+          </p>
+          {top10DemandCapacity.length > 0 ? (
+            renderDefaultBarChart(
+              top10DemandCapacity,
+              "Demand Capacity (MW)",
+              colorPalette.info
+            )
+          ) : (
+            <div className="text-gray-500">No data available</div>
+          )}
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Top 10 Sites by Firm Capacity
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Sites with highest Firm Capacity (MW)
+          </p>
+          {top10FirmCapacity.length > 0 ? (
+            renderDefaultBarChart(
+              top10FirmCapacity,
+              "Firm Capacity (MW)",
+              colorPalette.success
             )
           ) : (
             <div className="text-gray-500">No data available</div>
@@ -1512,12 +1622,6 @@ const DynamicChartGenerator = ({
                 )}
               </span>
             </div>
-            <button
-              onClick={fetchSavedViews}
-              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Refresh Saved Views
-            </button>
           </div>
         </motion.div>
       )}
@@ -1752,9 +1856,20 @@ const DynamicChartGenerator = ({
                   className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium flex items-center gap-1"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Download PNG
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleDownloadData}
+                  className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Download
+                  Download Data
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.05 }}

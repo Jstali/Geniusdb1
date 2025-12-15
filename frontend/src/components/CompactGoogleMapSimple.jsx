@@ -191,11 +191,12 @@ const CompactGoogleMapSimple = ({
           filteredData[0]?.["Spatial Coordinates"] !== undefined,
       });
 
-      const processedMarkers = extractMapMarkers(filteredData, locationColumn);
+      const processedMarkers = extractMapMarkers(filteredData);
       console.log(
         "CompactGoogleMapSimple: Processed markers from filtered data:",
         processedMarkers.length
       );
+      console.log("CompactGoogleMapSimple: Sample markers:", processedMarkers.slice(0, 3));
       setMarkers(processedMarkers);
       setLoading(false);
     } else {

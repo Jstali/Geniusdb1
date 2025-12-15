@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import HomePage from "./HomePage";
-import MapView from "./MapView";
+import HomePage from "./HomePage.jsx";
+import MapView from "./MapView.jsx";
 import TableView from "../components/TableView";
-import ChartGeneratorDemo from "./ChartGeneratorDemo";
-import SummaryPage from "./SummaryPage";
+import ChartGeneratorDemo from "./ChartGeneratorDemo.jsx";
+import SummaryPage from "./SummaryPage.jsx";
 import ViewManagementModal from "../components/ViewManagementModal";
+import { API_BASE } from "../config/api";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -37,22 +38,10 @@ const Dashboard = () => {
   // Chart state for persistence across page navigation
   const [generatedChart, setGeneratedChart] = useState(null);
 
-  // Load active view from localStorage on mount
-  useEffect(() => {
-    const savedActiveView = localStorage.getItem('activeView');
-    if (savedActiveView) {
-      console.log("Loading active view from localStorage:", savedActiveView);
-      // Load the saved view from the database
-      handleLoadSavedView(savedActiveView);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Fetch all columns for ViewManager
   useEffect(() => {
     const fetchColumns = async () => {
       try {
-        const API_BASE = (window._env_ && window._env_.API_BASE) || "";
         const response = await fetch(`${API_BASE}/data/columns`);
         if (response.ok) {
           const data = await response.json();
@@ -100,34 +89,69 @@ const Dashboard = () => {
     }
   };
 
+  const resolveViewSlot = async (viewName) => {
+    if (!viewName) {
+      return null;
+    }
+
+    const slotMatch = viewName.match(/^View\s+(\d+)$/i);
+    if (slotMatch) {
+      return parseInt(slotMatch[1], 10);
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/user/views`);
+      if (!response.ok) {
+        console.warn("Failed to fetch saved views list:", response.status);
+        return null;
+      }
+
+      const payload = await response.json();
+      const views = Array.isArray(payload?.views) ? payload.views : [];
+      const matchingView = views.find((view) => view.name === viewName);
+
+      if (matchingView?.slot) {
+        return matchingView.slot;
+      }
+    } catch (err) {
+      console.warn("Error resolving view slot from backend:", err);
+    }
+
+    return null;
+  };
+
   // Load a saved view by name
   const handleLoadSavedView = async (viewName) => {
     try {
       console.log("Loading saved view:", viewName);
-      
-      // Extract slot number from view name (e.g., "View 1" -> 1)
-      const slotMatch = viewName.match(/View (\d+)/);
-      if (!slotMatch) {
-        console.error("Invalid view name format:", viewName);
+
+      const slot = await resolveViewSlot(viewName);
+
+      if (!slot) {
+        console.warn("Unable to resolve slot for view:", viewName);
+        localStorage.removeItem("activeView");
         return;
       }
-      
-      const slot = parseInt(slotMatch[1]);
-      
-      const API_BASE = (window._env_ && window._env_.API_BASE) || "";
+
       const response = await fetch(`${API_BASE}/api/user/views/${slot}`);
-      
+
+      if (response.status === 404) {
+        console.warn(`Saved view slot ${slot} not found. Clearing active view.`);
+        localStorage.removeItem("activeView");
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.error) {
         console.error("Error loading view:", data.error);
         return;
       }
-      
+
       // Parse all saved configurations
       const savedFilters = data.filters ? JSON.parse(data.filters) : {};
       const savedChartConfig = data.chart_config
@@ -159,10 +183,9 @@ const Dashboard = () => {
         mapView: savedMapConfig,
         viewName: viewName,
       };
-      
+
       // Apply the view configuration
       handleViewLoad(viewConfig);
-      
     } catch (err) {
       console.error("Failed to load saved view:", err);
     }
@@ -174,13 +197,6 @@ const Dashboard = () => {
 
     // Clear the previously generated chart when switching views
     setGeneratedChart(null);
-    console.log("Cleared previously generated chart");
-
-    // Save active view to localStorage for persistence across reloads
-    if (viewConfig.viewName) {
-      localStorage.setItem('activeView', viewConfig.viewName);
-      console.log("Saved active view to localStorage:", viewConfig.viewName);
-    }
 
     // Update table view configuration with enhanced state
     if (viewConfig.tableView) {
@@ -272,6 +288,7 @@ const Dashboard = () => {
               chartConfig={chartViewConfig}
               generatedChart={generatedChart}
               setGeneratedChart={setGeneratedChart}
+              setChartConfig={setChartViewConfig}
             />
           </div>
         );
@@ -364,6 +381,7 @@ const Dashboard = () => {
           setIsViewManagerOpen(false);
         }}
         currentTableView={tableViewConfig}
+        currentChartConfig={chartViewConfig}
         allColumns={allColumns}
         activeView={tableViewConfig?.activeView || null}
       />

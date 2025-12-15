@@ -234,7 +234,10 @@ def get_transformer_data():
         df = get_data()
         if df is None or df.empty:
             raise HTTPException(status_code=500, detail="No data available")
-            
+        
+        print(f"Raw data shape: {df.shape}")
+        print(f"Raw columns: {list(df.columns)}")
+        
         # Comprehensive NaN and infinite value handling
         # Replace infinite values with None
         df = df.replace([float('inf'), float('-inf')], None)
@@ -246,7 +249,7 @@ def get_transformer_data():
         for col in df.columns:
             if df[col].dtype == 'object':
                 # For object columns, replace any string representations of nan
-                df[col] = df[col].replace(['nan', 'NaN', 'null', 'None'], None)
+                df[col] = df[col].replace(['nan', 'NaN', 'null', 'None', '\\N'], None)
         
         # Convert DataFrame to list of dictionaries
         transformer_data = df.to_dict('records')
@@ -258,6 +261,9 @@ def get_transformer_data():
                 if isinstance(value, float):
                     if pd.isna(value):  # Use pd.isna instead of pd.isfinite
                         record[key] = None
+        
+        print(f"Processed data count: {len(transformer_data)}")
+        print(f"Sample record keys: {list(transformer_data[0].keys()) if transformer_data else 'No data'}")
         
         return transformer_data
     except Exception as e:
@@ -877,7 +883,7 @@ def get_filtered_map_data(view_name: str, request_data: dict = Body(default={}))
                 column_mapping = {
                     "site_name": "Site Name",
                     "voltage_level": "Site Voltage",
-                    "available_power": "Generation Headroom Mw",
+                    "available_power": "Generation Capacity",
                     "network_operator": "Licence Area"
                 }
                 
@@ -963,7 +969,7 @@ def get_filtered_map_data(view_name: str, request_data: dict = Body(default={}))
                         # Frontend column names (from original_name in JSON)
                         "site_name": "Site Name",
                         "voltage_level": "Site Voltage", 
-                        "available_power": "Generation Headroom Mw",
+                        "available_power": "Generation Capacity",
                         "network_operator": "Licence Area",
                         "spatial_coordinates": "Spatial Coordinates",
                         "site_type": "Site Type",
@@ -1124,13 +1130,13 @@ def get_homepage_map_data(request_data: dict = Body(default={})):
             df = df[df["Site Voltage"] == voltage_filter]
             print(f"Applied voltage level filter: {voltage_filter}, rows now: {len(df)}")
         
-        # Apply Available Power filter (>= equivalent)
+        # Apply Generation Capacity filter (>= equivalent)
         if "available_power" in filters and filters["available_power"] is not None:
             power_filter = float(filters["available_power"])
             # Convert to numeric for comparison
-            df["Generation Headroom Mw"] = pd.to_numeric(df["Generation Headroom Mw"], errors='coerce')
-            df = df[df["Generation Headroom Mw"] >= power_filter]
-            print(f"Applied available power filter: >= {power_filter}, rows now: {len(df)}")
+            df["Generation Capacity"] = pd.to_numeric(df["Generation Capacity"], errors='coerce')
+            df = df[df["Generation Capacity"] >= power_filter]
+            print(f"Applied generation capacity filter: >= {power_filter}, rows now: {len(df)}")
         
         # Apply Network Operator filter (= equivalent)
         if "network_operator" in filters and filters["network_operator"]:
@@ -1171,7 +1177,7 @@ def get_homepage_map_data(request_data: dict = Body(default={})):
                         # Frontend column names (from original_name in JSON)
                         "site_name": "Site Name",
                         "voltage_level": "Site Voltage", 
-                        "available_power": "Generation Headroom Mw",
+                        "available_power": "Generation Capacity",
                         "network_operator": "Licence Area",
                         "spatial_coordinates": "Spatial Coordinates",
                         "site_type": "Site Type",

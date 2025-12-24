@@ -467,23 +467,25 @@ const DataTable = ({
   // Stringify initialFilters for dependency comparison
   const initialFiltersKey = JSON.stringify(initialFilters);
   
-  // Apply initial filters when component mounts or initialFilters/columns change
+  // Apply initial filters only once when component mounts
   useEffect(() => {
-    console.log("DataTable useEffect TRIGGERED: initialFilters=", initialFilters, "columns.length=", columns?.length);
+    // Skip if already applied
+    if (initialFiltersApplied.current) {
+      return;
+    }
     
     // Wait for columns to be available
     if (!columns || columns.length === 0) {
-      console.log("DataTable: No columns yet, skipping filter application");
       return;
     }
     
     // Skip if no initial filters
     if (!initialFilters || Object.keys(initialFilters).length === 0) {
-      console.log("DataTable: No initial filters to apply");
+      initialFiltersApplied.current = true;
       return;
     }
     
-    console.log("DataTable: Applying initial filters NOW", initialFilters);
+    console.log("DataTable: Applying initial filters", initialFilters);
     
     const newColumnFilters = [];
     
@@ -492,14 +494,12 @@ const DataTable = ({
         return;
       }
       
-      // Find matching column (case-insensitive)
       const matchingColumn = columns.find(col => 
         col.accessorKey === columnId || 
         col.accessorKey?.toLowerCase() === columnId.toLowerCase()
       );
       
       const actualColumnId = matchingColumn ? matchingColumn.accessorKey : columnId;
-      console.log("DataTable: Filter -", actualColumnId, "=", filterValues);
       
       newColumnFilters.push({
         id: actualColumnId,
@@ -507,15 +507,15 @@ const DataTable = ({
       });
     });
     
-    console.log("DataTable: Setting columnFilters to", newColumnFilters);
     setColumnFilters(newColumnFilters);
     
     const newMultiSelectValues = {};
     newColumnFilters.forEach(filter => {
       newMultiSelectValues[filter.id] = filter.value;
     });
-    console.log("DataTable: Setting columnMultiSelectValues to", newMultiSelectValues);
     setColumnMultiSelectValues(newMultiSelectValues);
+    
+    initialFiltersApplied.current = true;
     
   }, [initialFiltersKey, columns.length]);
 

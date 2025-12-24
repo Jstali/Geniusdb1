@@ -209,25 +209,11 @@ const HomePage = ({
     console.log("HomePage: Received filter changes from DataTable", filters);
     setTableFilters(filters);
     
-    // Only update tableViewConfig.filters if user manually changed filters
-    // Don't overwrite if the current filters came from a saved view and DataTable reports empty
-    const currentFilters = tableViewConfig?.filters || {};
-    const hasCurrentFilters = Object.keys(currentFilters).length > 0;
-    const hasNewFilters = Object.keys(filters).length > 0;
-    
-    // Update only if: user added filters OR user cleared filters (had filters before, now empty)
-    if (hasNewFilters || (hasCurrentFilters && !hasNewFilters && Object.keys(filters).length === 0)) {
-      // Check if this is just DataTable initializing with empty filters - don't overwrite saved view filters
-      if (!hasNewFilters && hasCurrentFilters) {
-        console.log("HomePage: Skipping filter update - keeping saved view filters");
-        return;
-      }
-      
-      setTableViewConfig(prev => ({
-        ...prev,
-        filters: filters
-      }));
-    }
+    // Always update tableViewConfig.filters to reflect current state
+    setTableViewConfig(prev => ({
+      ...prev,
+      filters: filters
+    }));
   };
 
   // Calculate summary statistics based on filtered data

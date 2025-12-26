@@ -37,6 +37,17 @@ const Dashboard = () => {
   // Chart state for persistence across page navigation
   const [generatedChart, setGeneratedChart] = useState(null);
 
+  // Load active view from localStorage on mount
+  useEffect(() => {
+    const savedActiveView = localStorage.getItem('activeView');
+    if (savedActiveView) {
+      console.log("Loading active view from localStorage:", savedActiveView);
+      // Load the saved view from the database
+      handleLoadSavedView(savedActiveView);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Fetch all columns for ViewManager
   useEffect(() => {
     const fetchColumns = async () => {
@@ -89,23 +100,106 @@ const Dashboard = () => {
     }
   };
 
+  // Load a saved view by name
+  const handleLoadSavedView = async (viewName) => {
+    try {
+      console.log("Loading saved view:", viewName);
+      
+      // Extract slot number from view name (e.g., "View 1" -> 1)
+      const slotMatch = viewName.match(/View (\d+)/);
+      if (!slotMatch) {
+        console.error("Invalid view name format:", viewName);
+        return;
+      }
+      
+      const slot = parseInt(slotMatch[1]);
+      
+      const API_BASE = (window._env_ && window._env_.API_BASE) || "";
+      const response = await fetch(`${API_BASE}/api/user/views/${slot}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error("Error loading view:", data.error);
+        return;
+      }
+      
+      // Parse all saved configurations
+      const savedFilters = data.filters ? JSON.parse(data.filters) : {};
+      const savedChartConfig = data.chart_config
+        ? JSON.parse(data.chart_config)
+        : { type: "bar", xAxis: "", yAxis: "" };
+      const savedMapConfig = data.map_config
+        ? JSON.parse(data.map_config)
+        : { locationColumn: "Site Name", showMarkers: true, markerFilter: [] };
+      const savedSortConfig = data.sort_config
+        ? JSON.parse(data.sort_config)
+        : { sortBy: [], sortDirection: "asc" };
+      const savedPaginationConfig = data.pagination_config
+        ? JSON.parse(data.pagination_config)
+        : { pageSize: 10, currentPage: 1 };
+      
+      // Apply the loaded view configuration with all saved state
+      const viewConfig = {
+        tableView: {
+          selectedColumns: data.selected_columns
+            ? data.selected_columns.split(",")
+            : [],
+          filters: savedFilters,
+          sortBy: savedSortConfig.sortBy,
+          sortDirection: savedSortConfig.sortDirection,
+          pageSize: savedPaginationConfig.pageSize,
+          currentPage: savedPaginationConfig.currentPage,
+        },
+        chartView: savedChartConfig,
+        mapView: savedMapConfig,
+        viewName: viewName,
+      };
+      
+      // Apply the view configuration
+      handleViewLoad(viewConfig);
+      
+    } catch (err) {
+      console.error("Failed to load saved view:", err);
+    }
+  };
+
   const handleViewLoad = (viewConfig) => {
     console.log("=== Dashboard: handleViewLoad called ===");
     console.log("View config:", viewConfig);
 
+    // Clear the previously generated chart when switching views
+    setGeneratedChart(null);
+    console.log("Cleared previously generated chart");
+
+    // Save active view to localStorage for persistence across reloads
+    if (viewConfig.viewName) {
+      localStorage.setItem('activeView', viewConfig.viewName);
+      console.log("Saved active view to localStorage:", viewConfig.viewName);
+    }
+
     // Update table view configuration with enhanced state
     if (viewConfig.tableView) {
+      // Create a completely new config object, replacing the old one entirely
+      // IMPORTANT: Explicitly set filters to the saved filters or empty object
+      // This prevents filters from one view bleeding into another
+      const savedFilters = viewConfig.tableView.filters || {};
+      console.log("Setting filters for view:", viewConfig.viewName, "Filters:", savedFilters);
+      
       const newTableViewConfig = {
-        ...tableViewConfig,
-        ...viewConfig.tableView,
-        activeView: viewConfig.viewName || null, // Set active view
-        // Ensure all enhanced fields are included
         selectedColumns: viewConfig.tableView.selectedColumns || [],
-        filters: viewConfig.tableView.filters || {},
+        filters: savedFilters, // Explicitly use saved filters, not previous filters
         sortBy: viewConfig.tableView.sortBy || [],
         sortDirection: viewConfig.tableView.sortDirection || "asc",
         pageSize: viewConfig.tableView.pageSize || 10,
         currentPage: viewConfig.tableView.currentPage || 1,
+        activeView: viewConfig.viewName || null, // Set active view
+        // Preserve map config if it exists
+        ...(tableViewConfig?.mapConfig ? { mapConfig: tableViewConfig.mapConfig } : {}),
       };
       console.log("Enhanced table view config updated:", newTableViewConfig);
       console.log("Selected columns:", newTableViewConfig.selectedColumns);
@@ -271,6 +365,7 @@ const Dashboard = () => {
         }}
         currentTableView={tableViewConfig}
         allColumns={allColumns}
+        activeView={tableViewConfig?.activeView || null}
       />
     </div>
   );

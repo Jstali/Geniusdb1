@@ -10,8 +10,35 @@ registerAllModules();
 
 // Helper function to group data by multiple keys
 const groupBy = (array, keys) => {
-  return array.reduce((groups, item) => {
-    const groupKey = keys.map((key) => item[key]).join("|");
+  if (!array || !Array.isArray(array)) {
+    console.error("groupBy: Invalid array provided:", array);
+    return {};
+  }
+  
+  if (!keys || !Array.isArray(keys) || keys.length === 0) {
+    console.error("groupBy: Invalid keys provided:", keys);
+    return {};
+  }
+  
+  return array.reduce((groups, item, index) => {
+    if (!item || typeof item !== 'object') {
+      console.warn(`groupBy: Invalid item at index ${index}:`, item);
+      return groups;
+    }
+    
+    const groupKey = keys.map((key) => {
+      if (!item.hasOwnProperty(key)) {
+        console.warn(`groupBy: Missing key '${key}' in item:`, item);
+        return "(missing)";
+      }
+      
+      const value = item[key];
+      if (value === null || value === undefined || value === "" || value === "\\N" || value === "N/A") {
+        return "(blank)";
+      }
+      return String(value);
+    }).join("|");
+    
     if (!groups[groupKey]) {
       groups[groupKey] = [];
     }
@@ -20,22 +47,81 @@ const groupBy = (array, keys) => {
   }, {});
 };
 
-// Helper function to sum values in an array
+// Helper function to sum values
 const sum = (array, key) => {
+  if (!array || array.length === 0) {
+    console.warn(`Sum: Empty array for key ${key}`);
+    return 0;
+  }
+  
   return array.reduce((total, item) => {
+    if (!item || typeof item !== 'object') {
+      console.warn(`Sum: Invalid item for key ${key}:`, item);
+      return total;
+    }
+    
     const value = item[key];
-    // Handle different data types that can be converted to numbers
-    if (value === null || value === undefined || value === "") return total;
-    const numValue = Number(value);
-    return isNaN(numValue) ? total : total + numValue;
+    if (value === null || value === undefined || value === "" || value === "\\N" || value === "N/A") {
+      return total;
+    }
+    
+    let numValue;
+    if (typeof value === 'number') {
+      numValue = value;
+    } else if (typeof value === 'string') {
+      const cleanValue = value.replace(/[,\s]/g, '');
+      numValue = Number(cleanValue);
+    } else {
+      numValue = Number(value);
+    }
+    
+    if (isNaN(numValue)) {
+      console.warn(`Sum: Non-numeric value for key ${key}:`, value);
+      return total;
+    }
+    
+    return total + numValue;
   }, 0);
 };
 
 // Helper function to calculate average
 const average = (array, key) => {
   if (array.length === 0) return 0;
-  const sumValue = sum(array, key);
-  return sumValue / array.length;
+  
+  const numericValues = array
+    .map(item => item[key])
+    .filter(value => {
+      if (value === null || value === undefined || value === "" || value === "\\N" || value === "N/A") {
+        return false;
+      }
+      
+      let numValue;
+      if (typeof value === 'number') {
+        numValue = value;
+      } else if (typeof value === 'string') {
+        const cleanValue = value.replace(/[,\s]/g, '');
+        numValue = Number(cleanValue);
+      } else {
+        numValue = Number(value);
+      }
+      
+      return !isNaN(numValue);
+    })
+    .map(value => {
+      if (typeof value === 'number') {
+        return value;
+      } else if (typeof value === 'string') {
+        const cleanValue = value.replace(/[,\s]/g, '');
+        return Number(cleanValue);
+      } else {
+        return Number(value);
+      }
+    });
+  
+  if (numericValues.length === 0) return 0;
+  
+  const sumValue = numericValues.reduce((total, value) => total + value, 0);
+  return sumValue / numericValues.length;
 };
 
 // Helper function to count items
@@ -48,13 +134,23 @@ const min = (array, key) => {
   const validValues = array
     .map((item) => {
       const value = item[key];
-      if (value === null || value === undefined || value === "") return null;
-      const numValue = Number(value);
+      if (value === null || value === undefined || value === "" || value === "\\N" || value === "N/A") return null;
+      
+      let numValue;
+      if (typeof value === 'number') {
+        numValue = value;
+      } else if (typeof value === 'string') {
+        const cleanValue = value.replace(/[,\s]/g, '');
+        numValue = Number(cleanValue);
+      } else {
+        numValue = Number(value);
+      }
+      
       return isNaN(numValue) ? null : numValue;
     })
     .filter((val) => val !== null);
 
-  if (validValues.length === 0) return 0;
+  if (validValues.length === 0) return null;
   return Math.min(...validValues);
 };
 
@@ -63,13 +159,23 @@ const max = (array, key) => {
   const validValues = array
     .map((item) => {
       const value = item[key];
-      if (value === null || value === undefined || value === "") return null;
-      const numValue = Number(value);
+      if (value === null || value === undefined || value === "" || value === "\\N" || value === "N/A") return null;
+      
+      let numValue;
+      if (typeof value === 'number') {
+        numValue = value;
+      } else if (typeof value === 'string') {
+        const cleanValue = value.replace(/[,\s]/g, '');
+        numValue = Number(cleanValue);
+      } else {
+        numValue = Number(value);
+      }
+      
       return isNaN(numValue) ? null : numValue;
     })
     .filter((val) => val !== null);
 
-  if (validValues.length === 0) return 0;
+  if (validValues.length === 0) return null;
   return Math.max(...validValues);
 };
 
@@ -85,15 +191,6 @@ const convertToColumns = (data) => {
 };
 
 const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
-  // Only use provided data, don't fallback to sample data
-  // const rowData = useMemo(() => {
-  //   if (data && data.length > 0) {
-  //     return data;
-  //   }
-  //   // Return empty array when no data is provided
-  //   return [];
-  // }, [data]);
-
   // Convert data to column format for PivotConfigPanel
   const columns = useMemo(() => {
     return convertToColumns(data);
@@ -117,204 +214,333 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
 
   // Effect to generate pivot data when config changes
   useEffect(() => {
-    console.log("=== PIVOT TABLE VIEW: useEffect triggered ===");
-    console.log("useEffect dependencies:", {
-      pivotConfig: effectivePivotConfig,
-      externalPivotConfig: externalPivotConfig,
-      internalPivotConfig: pivotConfig,
-      dataLength: data?.length || 0,
-      isGenerated: effectiveIsGenerated,
-    });
+    console.log("=== PIVOT TABLE GENERATION ===");
+    console.log("Config:", effectivePivotConfig);
+    console.log("Data length:", data?.length || 0);
+    console.log("Data sample:", data?.slice(0, 2));
 
     if (effectivePivotConfig && data && data.length > 0) {
-      console.log(
-        "useEffect: Generating pivot data with config:",
-        effectivePivotConfig
-      );
       try {
+        // Validate data structure
+        const firstItem = data[0];
+        const dataKeys = Object.keys(firstItem);
+        console.log("Available data fields:", dataKeys);
+        
+        // Validate configuration against data
+        const allConfigFields = [
+          ...effectivePivotConfig.rows,
+          ...(effectivePivotConfig.columns || []),
+          ...effectivePivotConfig.values.map(v => v.field)
+        ];
+        
+        const missingFields = allConfigFields.filter(field => !dataKeys.includes(field));
+        if (missingFields.length > 0) {
+          console.error("Missing fields in data:", missingFields);
+          console.error("Available fields:", dataKeys);
+          setGeneratedPivotData([]);
+          return;
+        }
+        
         const newPivotData = generatePivotData(data, effectivePivotConfig);
-        setGeneratedPivotData(newPivotData);
-        console.log(
-          "useEffect: Pivot data generated successfully, rows:",
-          newPivotData.length
-        );
+        
+        // Validate the generated pivot data
+        const validation = validatePivotData(newPivotData, data, effectivePivotConfig);
+        
+        if (validation.isValid) {
+          console.log("✅ Pivot data validation passed");
+          setGeneratedPivotData(newPivotData);
+        } else {
+          console.error("❌ Pivot data validation failed:", validation.issues);
+          setGeneratedPivotData([]);
+        }
+        
+        // Log warnings even if validation passed
+        if (validation.warnings.length > 0) {
+          console.warn("⚠️ Pivot data validation warnings:", validation.warnings);
+        }
+        
+        console.log("Pivot data generated successfully, rows:", newPivotData.length);
+        
+        if (newPivotData.length > 0) {
+          console.log("Sample pivot row:", newPivotData[0]);
+        }
       } catch (error) {
-        console.error("useEffect: Error generating pivot data:", error);
+        console.error("Error generating pivot data:", error);
+        console.error("Error stack:", error.stack);
         setGeneratedPivotData([]);
       }
     } else {
-      console.log("useEffect: Skipping data generation - missing requirements");
+      console.log("Skipping data generation - missing requirements");
       setGeneratedPivotData([]);
     }
   }, [effectivePivotConfig, data]);
 
-  // Function to generate pivot data
+  // Main pivot data generation function
   const generatePivotData = (data, config) => {
-    if (
-      !data ||
-      data.length === 0 ||
-      !config ||
-      config.rows.length === 0 ||
-      config.values.length === 0
-    ) {
+    if (!data || data.length === 0 || !config || config.rows.length === 0 || config.values.length === 0) {
+      console.log("Pivot data generation skipped - missing requirements");
       return [];
     }
 
-    try {
-      console.log("Starting pivot data generation...");
-      // Get all row fields
-      const rowFields = config.rows;
+    console.log("=== PIVOT DATA GENERATION START ===");
+    console.log("Input data length:", data.length);
+    console.log("Rows:", config.rows);
+    console.log("Columns:", config.columns || []);
+    console.log("Values:", config.values);
+    
+    // Analyze data structure
+    const firstItem = data[0];
+    console.log("First data item:", firstItem);
+    console.log("Data keys:", Object.keys(firstItem));
+    
+    // Check for data quality issues
+    const dataQualityIssues = [];
+    data.forEach((item, index) => {
+      if (!item || typeof item !== 'object') {
+        dataQualityIssues.push(`Invalid item at index ${index}: ${typeof item}`);
+      }
+    });
+    
+    if (dataQualityIssues.length > 0) {
+      console.warn("Data quality issues found:", dataQualityIssues.slice(0, 5));
+    }
 
-      // Get all value fields with their aggregations
-      const valueConfigs = config.values;
+    const rowFields = config.rows;
+    const columnFields = config.columns || [];
+    const valueConfigs = config.values;
 
-      // Group data by all row dimensions
-      const groupedData = groupBy(data, rowFields);
+    // Group data by row fields
+    const rowGroups = groupBy(data, rowFields);
+    console.log("Row groups created:", Object.keys(rowGroups).length);
 
-      // Create result array
-      const result = [];
-
-      // Process each group
-      Object.entries(groupedData).forEach(([groupKey, groupItems]) => {
-        const row = {};
-
-        // Add all row group values
-        const rowKeys = groupKey.split("|");
-        rowFields.forEach((field, index) => {
-          row[field] = rowKeys[index] || "";
-        });
-
-        // Calculate aggregated values for each value field
-        valueConfigs.forEach((valueConfig) => {
-          const valueField = valueConfig.field;
-          const aggFunc = valueConfig.aggregation.toLowerCase();
-
-          let aggValue;
-          switch (aggFunc) {
-            case "sum":
-              aggValue = sum(groupItems, valueField);
-              break;
-            case "avg":
-              aggValue = average(groupItems, valueField);
-              break;
-            case "count":
-              aggValue = count(groupItems);
-              break;
-            case "min":
-              aggValue = min(groupItems, valueField);
-              break;
-            case "max":
-              aggValue = max(groupItems, valueField);
-              break;
-            default:
-              aggValue = sum(groupItems, valueField);
-          }
-          row[valueField] = aggValue;
-        });
-
-        result.push(row);
-      });
-
-      console.log(
-        "Pivot data generation completed. Rows generated:",
-        result.length
-      );
+    // If no columns, create simple pivot
+    if (columnFields.length === 0) {
+      const result = createSimplePivot(rowGroups, rowFields, valueConfigs);
+      
+      // Final duplicate check for simple pivot
+      if (result.length > 0) {
+        const allColumnNames = Object.keys(result[0]);
+        const uniqueColumnNames = new Set(allColumnNames);
+        if (allColumnNames.length !== uniqueColumnNames.size) {
+          console.error("CRITICAL: Duplicate column names found in simple pivot result!");
+          const duplicates = allColumnNames.filter((name, index) => allColumnNames.indexOf(name) !== index);
+          console.error("Duplicate columns:", duplicates);
+        }
+      }
+      
       return result;
-    } catch (error) {
-      console.error("Error generating pivot data:", error);
-      return [];
     }
+
+    // Create cross-tabulation pivot
+    const result = createCrossTabPivot(rowGroups, rowFields, columnFields, valueConfigs, data);
+    
+    // Final duplicate check
+    if (result.length > 0) {
+      const allColumnNames = Object.keys(result[0]);
+      const uniqueColumnNames = new Set(allColumnNames);
+      if (allColumnNames.length !== uniqueColumnNames.size) {
+        console.error("CRITICAL: Duplicate column names found in final result!");
+        const duplicates = allColumnNames.filter((name, index) => allColumnNames.indexOf(name) !== index);
+        console.error("Duplicate columns:", duplicates);
+      }
+    }
+    
+    return result;
   };
 
-  // Generate pivot table data based on configuration (keep for backward compatibility)
-  const pivotData = useMemo(() => {
-    console.log("Generating pivot data with config:", pivotConfig);
-    console.log("Data length:", data?.length || 0);
+  // Create simple pivot (rows only)
+  const createSimplePivot = (rowGroups, rowFields, valueConfigs) => {
+    console.log("Creating simple pivot...");
+    const result = [];
 
-    // Only generate data when configuration is provided
-    if (
-      !data ||
-      data.length === 0 ||
-      !pivotConfig ||
-      pivotConfig.rows.length === 0 ||
-      pivotConfig.values.length === 0
-    ) {
-      console.log("Skipping pivot data generation - missing requirements");
-      return [];
-    }
-
-    try {
-      console.log("Starting pivot data generation...");
-      // Get all row fields
-      const rowFields = pivotConfig.rows;
-
-      // Get all value fields with their aggregations
-      const valueConfigs = pivotConfig.values;
-
-      // Group data by all row dimensions
-      const groupedData = groupBy(data, rowFields);
-
-      // Create result array
-      const result = [];
-
-      // Process each group
-      Object.entries(groupedData).forEach(([groupKey, groupItems]) => {
-        const row = {};
-
-        // Add all row group values
-        const rowKeys = groupKey.split("|");
-        rowFields.forEach((field, index) => {
-          row[field] = rowKeys[index] || "";
-        });
-
-        // Calculate aggregated values for each value field
-        valueConfigs.forEach((valueConfig) => {
-          const valueField = valueConfig.field;
-          const aggFunc = valueConfig.aggregation.toLowerCase();
-
-          let aggValue;
-          switch (aggFunc) {
-            case "sum":
-              aggValue = sum(groupItems, valueField);
-              break;
-            case "avg":
-              aggValue = average(groupItems, valueField);
-              break;
-            case "count":
-              aggValue = count(groupItems);
-              break;
-            case "min":
-              aggValue = min(groupItems, valueField);
-              break;
-            case "max":
-              aggValue = max(groupItems, valueField);
-              break;
-            default:
-              aggValue = sum(groupItems, valueField);
-          }
-          row[valueField] = aggValue;
-        });
-
-        result.push(row);
+    Object.entries(rowGroups).forEach(([rowKey, items]) => {
+      const row = {};
+      
+      // Add row values
+      const rowValues = rowKey.split("|");
+      rowFields.forEach((field, index) => {
+        const displayValue = rowValues[index] === "(blank)" ? "" : rowValues[index];
+        row[field] = displayValue;
       });
 
-      console.log(
-        "Pivot data generation completed. Rows generated:",
-        result.length
-      );
-      return result;
-    } catch (error) {
-      console.error("Error generating pivot data:", error);
-      return [];
-    }
-  }, [data, pivotConfig]);
+      // Add aggregated values with unique column names
+      valueConfigs.forEach((valueConfig, index) => {
+        const field = valueConfig.field;
+        const aggregation = valueConfig.aggregation.toLowerCase();
+        
+        let value;
+        switch (aggregation) {
+          case "sum":
+            value = sum(items, field);
+            break;
+          case "avg":
+            value = average(items, field);
+            break;
+          case "count":
+            value = count(items);
+            break;
+          case "min":
+            value = min(items, field);
+            break;
+          case "max":
+            value = max(items, field);
+            break;
+          default:
+            value = sum(items, field);
+        }
+        
+        // Create unique column name to avoid duplicates
+        const uniqueFieldName = valueConfigs.length > 1 ? `${field}_${aggregation.toUpperCase()}` : field;
+        row[uniqueFieldName] = value;
+      });
 
-  // Prepare column definitions for Handsontable based on pivot data
+      result.push(row);
+    });
+
+    console.log("Simple pivot created with", result.length, "rows");
+    
+    // Check for duplicate column names
+    if (result.length > 0) {
+      const columnNames = Object.keys(result[0]);
+      const uniqueColumnNames = new Set(columnNames);
+      if (columnNames.length !== uniqueColumnNames.size) {
+        console.warn("Duplicate column names detected in simple pivot:", columnNames);
+        const duplicates = columnNames.filter((name, index) => columnNames.indexOf(name) !== index);
+        console.warn("Duplicate columns:", duplicates);
+      } else {
+        console.log("All column names are unique:", columnNames);
+      }
+    }
+    
+    return result;
+  };
+
+  // Create cross-tabulation pivot
+  const createCrossTabPivot = (rowGroups, rowFields, columnFields, valueConfigs, originalData) => {
+    console.log("Creating cross-tabulation pivot...");
+    
+    // Get all unique column combinations
+    const columnCombinations = new Set();
+    originalData.forEach(item => {
+      const colKey = columnFields.map(field => {
+        const value = item[field];
+        if (value === null || value === undefined || value === "" || value === "\\N" || value === "N/A") {
+          return "(blank)";
+        }
+        return String(value);
+      }).join("|");
+      columnCombinations.add(colKey);
+    });
+
+    console.log("Column combinations found:", Array.from(columnCombinations));
+    
+    // Create a mapping of column combinations to unique column names
+    const columnNameMap = new Map();
+    let columnIndex = 0;
+
+    const result = [];
+
+    Object.entries(rowGroups).forEach(([rowKey, rowItems]) => {
+      const row = {};
+      
+      // Add row values
+      const rowValues = rowKey.split("|");
+      rowFields.forEach((field, index) => {
+        const displayValue = rowValues[index] === "(blank)" ? "" : rowValues[index];
+        row[field] = displayValue;
+      });
+
+      // Add column values
+      columnCombinations.forEach(colKey => {
+        const colValues = colKey.split("|");
+        
+        // Filter items that match this column combination
+        const matchingItems = rowItems.filter(item => {
+          return columnFields.every((field, index) => {
+            const itemValue = item[field];
+            const colValue = colValues[index];
+            
+            const itemNormalized = (itemValue === null || itemValue === undefined || itemValue === "" || itemValue === "\\N" || itemValue === "N/A") ? "(blank)" : String(itemValue);
+            return itemNormalized === colValue;
+          });
+        });
+
+        // Calculate aggregated values for this column combination
+        valueConfigs.forEach((valueConfig, valueIndex) => {
+          const field = valueConfig.field;
+          const aggregation = valueConfig.aggregation.toLowerCase();
+          
+          let value;
+          switch (aggregation) {
+            case "sum":
+              value = sum(matchingItems, field);
+              break;
+            case "avg":
+              value = average(matchingItems, field);
+              break;
+            case "count":
+              value = count(matchingItems);
+              break;
+            case "min":
+              value = min(matchingItems, field);
+              break;
+            case "max":
+              value = max(matchingItems, field);
+              break;
+            default:
+              value = sum(matchingItems, field);
+          }
+          
+          // Create unique column name for this combination
+          let columnName;
+          if (!columnNameMap.has(colKey)) {
+            // Create a unique column name for this combination
+            const colHeader = columnFields.map((field, index) => {
+              const val = colValues[index];
+              const displayValue = val === "(blank)" ? "Blank" : val;
+              return `${field}: ${displayValue}`;
+            }).join(" | ");
+            
+            columnName = `Col_${columnIndex}_${colHeader.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            columnNameMap.set(colKey, columnName);
+            columnIndex++;
+          } else {
+            columnName = columnNameMap.get(colKey);
+          }
+          
+          // Create unique cell key
+          const cellKey = `${columnName}_${field}_${aggregation.toUpperCase()}`;
+          
+          row[cellKey] = value;
+        });
+      });
+
+      result.push(row);
+    });
+
+    console.log("Cross-tabulation pivot created with", result.length, "rows");
+    
+    // Check for duplicate column names
+    if (result.length > 0) {
+      const columnNames = Object.keys(result[0]);
+      const uniqueColumnNames = new Set(columnNames);
+      if (columnNames.length !== uniqueColumnNames.size) {
+        console.warn("Duplicate column names detected in cross-tabulation pivot:", columnNames);
+        const duplicates = columnNames.filter((name, index) => columnNames.indexOf(name) !== index);
+        console.warn("Duplicate columns:", duplicates);
+      } else {
+        console.log("All column names are unique:", columnNames);
+      }
+    }
+    
+    return result;
+  };
+
+  // Prepare column definitions for Handsontable
   const columnDefs = useMemo(() => {
     if (generatedPivotData && generatedPivotData.length > 0) {
       const firstRow = generatedPivotData[0];
       return Object.keys(firstRow).map((key) => {
-        // Determine column type based on data
         if (typeof firstRow[key] === "number") {
           return {
             data: key,
@@ -326,16 +552,54 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
         return { data: key, type: "text", width: 120 };
       });
     }
-    // Return empty array when no pivot data
     return [];
   }, [generatedPivotData]);
 
-  // Get column headers based on pivot data
+  // Get column headers with proper formatting
   const columnHeaders = useMemo(() => {
     if (generatedPivotData && generatedPivotData.length > 0) {
-      return Object.keys(generatedPivotData[0]);
+      const headers = Object.keys(generatedPivotData[0]);
+      return headers.map(header => {
+        // Clean up column headers for better display
+        let cleanHeader = header;
+        
+        // Handle aggregation suffixes
+        if (header.includes('_SUM')) {
+          cleanHeader = header.replace('_SUM', ' (Sum)');
+        } else if (header.includes('_AVG')) {
+          cleanHeader = header.replace('_AVG', ' (Avg)');
+        } else if (header.includes('_COUNT')) {
+          cleanHeader = header.replace('_COUNT', ' (Count)');
+        } else if (header.includes('_MIN')) {
+          cleanHeader = header.replace('_MIN', ' (Min)');
+        } else if (header.includes('_MAX')) {
+          cleanHeader = header.replace('_MAX', ' (Max)');
+        }
+        
+        // Clean up cross-tabulation headers
+        if (cleanHeader.includes(' | ')) {
+          // This is a cross-tabulation header, make it more readable
+          cleanHeader = cleanHeader.replace(/\|/g, ' | ').trim();
+        }
+        
+        // Handle cross-tabulation headers with field names and values
+        if (cleanHeader.startsWith('Col_') && (cleanHeader.includes('_SUM') || cleanHeader.includes('_AVG') || cleanHeader.includes('_COUNT') || cleanHeader.includes('_MIN') || cleanHeader.includes('_MAX'))) {
+          // This is a cross-tabulation header, extract the meaningful part
+          const parts = cleanHeader.split('_');
+          if (parts.length >= 4) {
+            const fieldPart = parts[2]; // Skip 'Col' and index
+            const valuePart = parts[3];
+            const aggPart = parts[parts.length - 1];
+            
+            if (fieldPart && valuePart && aggPart) {
+              cleanHeader = `${fieldPart} (${valuePart}) - ${aggPart}`;
+            }
+          }
+        }
+        
+        return cleanHeader;
+      });
     }
-    // Return empty array when no pivot data
     return [];
   }, [generatedPivotData]);
 
@@ -355,12 +619,10 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
     height: 500,
     width: "100%",
     className: "htCenter",
-    // Ensure all data is displayed without virtualization limits
     renderAllRows: true,
-    // Disable pagination/virtualization that might limit rows
     viewportRowRenderingOffset: "auto",
-    // Ensure the table can grow to accommodate all data
     stretchH: "all",
+    readOnly: true,
   };
 
   const hotTableRef = useRef();
@@ -368,8 +630,7 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
   // Export to CSV function
   const exportToCSV = () => {
     if (hotTableRef.current && hotTableRef.current.hotInstance) {
-      const exportPlugin =
-        hotTableRef.current.hotInstance.getPlugin("exportFile");
+      const exportPlugin = hotTableRef.current.hotInstance.getPlugin("exportFile");
       if (exportPlugin) {
         exportPlugin.downloadFile("csv", {
           bom: false,
@@ -395,16 +656,12 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
         return;
       }
 
-      // Create a simple Excel-compatible CSV with proper formatting
       const headers = Object.keys(generatedPivotData[0]);
       const csvContent = [
-        // Add headers
         headers.join(","),
-        // Add data rows
         ...generatedPivotData.map(row => 
           headers.map(header => {
             const value = row[header];
-            // Escape commas and quotes in CSV
             if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
               return `"${value.replace(/"/g, '""')}"`;
             }
@@ -413,22 +670,18 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
         )
       ].join("\n");
 
-      // Create blob with Excel-compatible MIME type
       const blob = new Blob([csvContent], { 
         type: "application/vnd.ms-excel;charset=utf-8;" 
       });
       
-      // Create download link
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.href = url;
       
-      // Generate filename with current date
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
       link.download = `pivot-table-data_${dateStr}.xls`;
       
-      // Trigger download
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -437,46 +690,113 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
       console.log("Excel export completed successfully");
     } catch (error) {
       console.error("Error exporting to Excel:", error);
-      // Fallback: try the original Handsontable method
-      if (hotTableRef.current && hotTableRef.current.hotInstance) {
-        const exportPlugin = hotTableRef.current.hotInstance.getPlugin("exportFile");
-        if (exportPlugin) {
-          try {
-            exportPlugin.downloadFile("csv", {
-              bom: false,
-              columnDelimiter: ",",
-              columnHeaders: true,
-              exportHiddenColumns: true,
-              exportHiddenRows: true,
-              fileExtension: "csv",
-              filename: "pivot-table-data_[YYYY]-[MM]-[DD]",
-              mimeType: "text/csv",
-              rowDelimiter: "\r\n",
-              rowHeaders: true,
-            });
-          } catch (fallbackError) {
-            console.error("Fallback export also failed:", fallbackError);
-          }
-        }
-      }
     }
+  };
+
+  // Comprehensive data validation function
+  const validatePivotData = (pivotData, originalData, config) => {
+    console.log("🔍 Starting comprehensive pivot data validation...");
+    
+    const validation = {
+      isValid: true,
+      issues: [],
+      warnings: [],
+      stats: {}
+    };
+
+    // Basic data checks
+    if (!pivotData || pivotData.length === 0) {
+      validation.isValid = false;
+      validation.issues.push("No pivot data generated");
+      return validation;
+    }
+
+    if (!originalData || originalData.length === 0) {
+      validation.isValid = false;
+      validation.issues.push("No original data available");
+      return validation;
+    }
+
+    // Check data structure
+    const firstRow = pivotData[0];
+    const expectedRowFields = config.rows || [];
+    const expectedValueFields = config.values || [];
+
+    // Check if row fields are present
+    expectedRowFields.forEach(field => {
+      if (!firstRow.hasOwnProperty(field)) {
+        validation.warnings.push(`Row field '${field}' not found in pivot data`);
+      }
+    });
+
+    // Check if value fields are present (they might have aggregation suffixes)
+    expectedValueFields.forEach(valueConfig => {
+      const field = valueConfig.field;
+      const aggregation = valueConfig.aggregation.toLowerCase();
+      const expectedKey = `${field}_${aggregation.toUpperCase()}`;
+      
+      const hasValueField = Object.keys(firstRow).some(key => 
+        key.includes(field) && key.includes(aggregation.toUpperCase())
+      );
+      
+      if (!hasValueField) {
+        validation.warnings.push(`Value field '${field}' with aggregation '${aggregation}' not found in pivot data`);
+      }
+    });
+
+    // Check for duplicate column names
+    const columnNames = Object.keys(firstRow);
+    const duplicateColumns = columnNames.filter((name, index) => 
+      columnNames.indexOf(name) !== index
+    );
+    
+    if (duplicateColumns.length > 0) {
+      validation.issues.push(`Duplicate column names found: ${duplicateColumns.join(', ')}`);
+    }
+
+    // Check data types and values
+    pivotData.forEach((row, rowIndex) => {
+      Object.entries(row).forEach(([key, value]) => {
+        // Check for unexpected data types
+        if (value !== null && value !== undefined && typeof value !== 'string' && typeof value !== 'number') {
+          validation.warnings.push(`Row ${rowIndex}, column '${key}': Unexpected data type '${typeof value}'`);
+        }
+        
+        // Check for NaN values
+        if (typeof value === 'number' && isNaN(value)) {
+          validation.issues.push(`Row ${rowIndex}, column '${key}': NaN value found`);
+        }
+      });
+    });
+
+    // Calculate statistics
+    validation.stats = {
+      totalRows: pivotData.length,
+      totalColumns: Object.keys(firstRow).length,
+      originalDataRows: originalData.length,
+      dataReduction: originalData.length > 0 ? 
+        ((originalData.length - pivotData.length) / originalData.length * 100).toFixed(1) + '%' : '0%',
+      hasNumericData: Object.values(firstRow).some(v => typeof v === 'number'),
+      hasNullValues: Object.values(firstRow).some(v => v === null || v === undefined),
+      duplicateColumns: duplicateColumns.length
+    };
+
+    console.log("✅ Pivot data validation completed:", validation);
+    return validation;
   };
 
   // Handle pivot configuration from PivotConfigPanel
   const handleDataGenerate = (config) => {
-    console.log("=== PIVOT TABLE VIEW: RECEIVED CONFIG ===");
     console.log("Received pivot configuration:", config);
 
-    // Validate the config before proceeding
-    if (!config || !config.rows || !config.columns || !config.values) {
+    if (!config || !config.rows || !config.values) {
       console.error("Invalid configuration received:", config);
       return;
     }
 
-    console.log("Setting pivot config and marking as generated");
     setPivotConfig(config);
     setIsGenerated(true);
-    setShowConfig(false); // Hide config panel when generating new pivot
+    setShowConfig(false);
     console.log("Pivot table generation initiated");
   };
 
@@ -488,26 +808,15 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
     setShowConfig(false);
   };
 
-  // Handle back - go back to configuration panel to select different options
+  // Handle back - go back to configuration panel
   const handleBack = () => {
     console.log("Going back to pivot configuration");
-    console.log("Current state before reset:", {
-      pivotConfig,
-      isGenerated,
-      generatedPivotDataLength: generatedPivotData.length,
-      externalPivotConfig,
-      showConfig
-    });
-    
-    // Set showConfig to true to force showing the configuration panel
     setShowConfig(true);
-    
-    console.log("Back button clicked - showing configuration panel");
   };
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
-      {/* Use the PivotConfigPanel component */}
+      {/* Pivot Configuration Panel */}
       {data && data.length > 0 && (!effectiveIsGenerated || showConfig) && (
         <PivotConfigPanel
           key={`pivot-config-${isGenerated}-${generatedPivotData.length}-${showConfig}`}
@@ -553,8 +862,7 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
       {data && data.length > 0 && !effectiveIsGenerated && (
         <div className="p-8 text-center text-gray-500">
           <p>
-            Configure the pivot table above and click &quot;Generate Pivot
-            Table&quot;
+            Configure the pivot table above and click "Generate Pivot Table"
           </p>
         </div>
       )}
@@ -571,6 +879,7 @@ const PivotTableView = ({ data, pivotConfig: externalPivotConfig }) => {
             </p>
           </div>
         )}
+
 
       {/* Handsontable component - only show when there's data to display */}
       {effectiveIsGenerated && generatedPivotData.length > 0 && (

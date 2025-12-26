@@ -1044,16 +1044,25 @@ print("\n" + "="*50)
 print("CALCULATING DEVIATION BETWEEN INSTALLED CAPACITY AND TOTAL GENERATION")
 print("="*50)
 
-# Calculate percentage deviation directly without creating intermediate columns
+# Calculate percentage deviation directly without creating intermediate columns Aryan Changes
 # Deviation % = |installedcapacity_mva - Max(Total Gen <1, Total Gen >1)| / installedcapacity_mva * 100
 # Handle cases where installedcapacity_mva is 0 to avoid division by zero
+# df_final['Deviation_Percentage'] = df_final.apply(
+#     lambda row: (
+#         abs(row['installedcapacity_mva'] - max(row['Total Gen <1 (MW)'], row['Total Gen >1 (MW)'])) / row['installedcapacity_mva'] * 100
+#         if row['installedcapacity_mva'] > 0
+#         else 0
+#     ), axis=1
+# )
 df_final['Deviation_Percentage'] = df_final.apply(
-    lambda row: (
-        abs(row['installedcapacity_mva'] - max(row['Total Gen <1 (MW)'], row['Total Gen >1 (MW)'])) / row['installedcapacity_mva'] * 100
-        if row['installedcapacity_mva'] > 0
-        else 0
-    ), axis=1
+    lambda row: round(
+        abs(row['installedcapacity_mva'] - max(row['Total Gen <1 (MW)'], row['Total Gen >1 (MW)'])) / row['installedcapacity_mva'] * 100,
+        2
+    ) if row['installedcapacity_mva'] > 0 else 0,
+    axis=1
 )
+
+
 
 # Create Deviation flag: "Yes" if deviation > 5%, "No" if deviation <= 5%
 df_final['Deviation'] = df_final['Deviation_Percentage'].apply(
@@ -2120,6 +2129,11 @@ else:
 
 # Rename columns
 clean_df = clean_df.rename(columns=column_mapping)
+
+# Remove unwanted Transrating Summer 7 and 8 columns if present 22-10-2025
+columns_to_remove = ['Transformer 7 Summer', 'Transformer 8 Summer', 'Transformer 7 Winter', 'Transformer 8 Winter']
+clean_df = clean_df.drop(columns=[col for col in columns_to_remove if col in clean_df.columns], errors='ignore')
+
 
 # Save the final processed data to CSV (single output file)
 output_file = "transformed_transformer_data.csv"

@@ -184,12 +184,13 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
       setError(errorMsg);
       return;
     }
-    if (columnsFields.length === 0) {
-      const errorMsg = "Please select at least one field for Columns";
-      console.warn("Validation failed - no columns selected:", errorMsg);
-      setError(errorMsg);
-      return;
-    }
+    // Columns are optional - Excel pivot tables can work with just rows and values
+    // if (columnsFields.length === 0) {
+    //   const errorMsg = "Please select at least one field for Columns";
+    //   console.warn("Validation failed - no columns selected:", errorMsg);
+    //   setError(errorMsg);
+    //   return;
+    // }
     if (values.length === 0) {
       const errorMsg = "Please select at least one field for Values";
       console.warn("Validation failed - no values selected:", errorMsg);
@@ -220,12 +221,13 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
       return;
     }
 
-    if (!config.columns || config.columns.length === 0) {
-      const errorMsg = "Configuration error: No columns specified";
-      console.error(errorMsg);
-      setError(errorMsg);
-      return;
-    }
+    // Columns are optional - Excel pivot tables can work with just rows and values
+    // if (!config.columns || config.columns.length === 0) {
+    //   const errorMsg = "Configuration error: No columns specified";
+    //   console.error(errorMsg);
+    //   setError(errorMsg);
+    //   return;
+    // }
 
     if (!config.values || config.values.length === 0) {
       const errorMsg = "Configuration error: No values specified";
@@ -310,7 +312,7 @@ const PivotConfigPanel = ({ columns, onDataGenerate, onCancel }) => {
         {/* Columns Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Columns (Multi-select)
+            Columns (Multi-select) - Optional
           </label>
           <div className="border rounded-md p-3 min-h-24 max-h-40 overflow-y-auto">
             {columnOptions.map((option) => (

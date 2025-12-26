@@ -93,9 +93,9 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
     const value = parseFloat(headroom);
     if (isNaN(value)) return { label: "Unknown", color: "gray" };
 
-    if (value >= 50) return { label: "Low (Green)", color: "green" };
-    if (value >= 20) return { label: "Medium (Amber)", color: "amber" };
-    return { label: "High (Red)", color: "red" };
+    if (value >= 50) return { label: "Low", color: "green" };
+    if (value >= 20) return { label: "Medium", color: "amber" };
+    return { label: "High", color: "red" };
   };
 
   // Get property values with fallbacks - ONLY required fields
@@ -153,6 +153,14 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
   );
 
   const riskLevel = calculateRiskLevel(generationHeadroom);
+  
+  // Debug logging
+  console.log("Risk Level Debug:", {
+    generationHeadroom,
+    riskLevel,
+    color: riskLevel.color,
+    label: riskLevel.label
+  });
 
   return (
     <div className="site-details-container bg-white p-6 h-full overflow-y-auto">
@@ -175,18 +183,27 @@ const SiteDetailsCard = ({ selectedSite, summaryStats, onClose }) => {
 
           <div className="space-y-3">
             {/* Risk Level */}
-            <div className="flex justify-between bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
+            <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg transition-colors duration-200 hover:bg-gray-100">
               <span className="text-gray-600 font-medium">Risk Level:</span>
               <span
-                className={`font-semibold ${
-                  riskLevel.color === "green"
-                    ? "text-geniusAquamarine"
-                    : riskLevel.color === "amber"
-                    ? "text-amber-600"
-                    : riskLevel.color === "red"
-                    ? "text-red-600"
-                    : "text-gray-600"
-                }`}
+                style={{
+                  backgroundColor: riskLevel.color === "green" ? "#dcfce7" : 
+                                 riskLevel.color === "amber" ? "#fef3c7" : 
+                                 riskLevel.color === "red" ? "#fee2e2" : "#dcfce7",
+                  color: riskLevel.color === "green" ? "#166534" : 
+                         riskLevel.color === "amber" ? "#92400e" : 
+                         riskLevel.color === "red" ? "#991b1b" : "#166534",
+                  borderColor: riskLevel.color === "green" ? "#86efac" : 
+                              riskLevel.color === "amber" ? "#fde68a" : 
+                              riskLevel.color === "red" ? "#fca5a5" : "#86efac",
+                  border: "1px solid",
+                  display: "inline-block",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                  marginLeft: "8px"
+                }}
               >
                 {riskLevel.label}
               </span>

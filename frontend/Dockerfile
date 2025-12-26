@@ -5,7 +5,7 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Install Python and build tools for canvas package
-RUN apk add --no-cache python3 make g++ pkgconfig cairo-dev pango-dev libjpeg-turbo-dev giflib-dev
+RUN apk add --no-cache python3 py3-pip make g++ pkgconfig cairo-dev pango-dev libjpeg-turbo-dev giflib-dev pixman-dev
 
 # Copy package files
 COPY package*.json ./

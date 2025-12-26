@@ -6,6 +6,7 @@ const ViewManagementModal = ({
   onLoadView,
   currentTableView,
   allColumns = [],
+  activeView = null,
 }) => {
   const [views, setViews] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState("");
@@ -15,13 +16,35 @@ const ViewManagementModal = ({
     xAxis: "",
     yAxis: "",
   });
-  // Remove filters state - we'll display table filters instead
+  const [viewFilters, setViewFilters] = useState({}); // Store filters for each view
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   // Get API base URL from environment or default to localhost:8000
   const API_BASE = (window._env_ && window._env_.API_BASE) || "";
+
+  // Debug: Log currentTableView changes and sync with viewFilters
+  useEffect(() => {
+    console.log("ViewManagementModal: currentTableView changed:", currentTableView);
+    console.log("ViewManagementModal: current filters:", currentTableView?.filters);
+    console.log("ViewManagementModal: activeView:", activeView, "selectedSlot:", selectedSlot);
+    
+    // Only sync filters when:
+    // 1. We have a selected slot
+    // 2. The current table has filters
+    // 3. The selected slot matches the active view (filters belong to this view)
+    const slotNumber = selectedSlot ? parseInt(selectedSlot) : null;
+    const activeViewSlot = activeView ? parseInt(activeView.replace('View ', '')) : null;
+    
+    if (selectedSlot && currentTableView?.filters && slotNumber === activeViewSlot) {
+      console.log("ViewManagementModal: Syncing filters for active view slot", selectedSlot, "with filters:", currentTableView.filters);
+      setViewFilters(currentTableView.filters);
+    } else {
+      console.log("ViewManagementModal: Not syncing filters - slot mismatch or no active view");
+      console.log("  selectedSlot:", selectedSlot, "activeViewSlot:", activeViewSlot);
+    }
+  }, [currentTableView, selectedSlot, activeView]);
 
   // Fetch saved views when component mounts
   useEffect(() => {
@@ -52,15 +75,23 @@ const ViewManagementModal = ({
                   yAxis: "",
                 }
           );
+          
+          // Load saved filters for this view
+          const savedFilters = savedView.filters ? JSON.parse(savedView.filters) : {};
+          setViewFilters(savedFilters);
+          console.log("Loaded filters for view slot", selectedSlot, ":", savedFilters);
+          
+          // DON'T apply filters when selecting a slot - only when explicitly loading the view
+          // This prevents cross-contamination between views
+          console.log("ViewManagementModal: Not applying filters on slot selection to prevent cross-contamination");
         } catch (e) {
           setChartConfig({
             type: "bar",
             xAxis: "",
             yAxis: "",
           });
+          setViewFilters({});
         }
-
-        // Filters will be handled by the table component
       } else {
         // Reset to defaults
         setViewName(`View ${selectedSlot}`);
@@ -69,7 +100,7 @@ const ViewManagementModal = ({
           xAxis: "",
           yAxis: "",
         });
-        // Filters will be handled by the table component
+        setViewFilters({});
       }
     }
   }, [selectedSlot, isOpen, views]);
@@ -195,11 +226,19 @@ const ViewManagementModal = ({
       setSuccess("");
 
       // Build enhanced payload with all required state
+      // Use viewFilters (stored filters for this specific view slot) when saving
+      // This ensures each view slot maintains its own isolated filter state
+      const filtersToSave = viewFilters;
+      
+      console.log("Saving filters for view slot", selectedSlot, ":", filtersToSave);
+      console.log("Current tableView filters:", currentTableView?.filters);
+      console.log("Stored viewFilters:", viewFilters);
+      
       const payload = {
         name: viewName,
         selected_columns: selectedColumns.join(","),
         chart_config: JSON.stringify(chartConfig), // Store as JSON string
-        filters: JSON.stringify(currentTableView?.filters || {}), // Store as JSON string
+        filters: JSON.stringify(filtersToSave), // Store current table filters for this specific view
         map_config: JSON.stringify({
           locationColumn: "Site Name", // Default location column for map
           showMarkers: true,
@@ -216,6 +255,7 @@ const ViewManagementModal = ({
       };
 
       console.log("Saving view with payload:", payload);
+      console.log("Filters being saved for view:", filtersToSave);
 
       const response = await fetch(
         `${API_BASE}/api/user/views/${selectedSlot}`,
@@ -615,25 +655,30 @@ const ViewManagementModal = ({
                   Current Table Filters
                 </label>
                 <div className="border border-gray-300 rounded-md p-3">
+                  {console.log("ViewManagementModal render - currentTableView:", currentTableView)}
+                  {console.log("ViewManagementModal render - filters:", currentTableView?.filters)}
                   {currentTableView?.filters &&
                   Object.keys(currentTableView.filters).length > 0 ? (
                     <div className="space-y-2">
                       {Object.entries(currentTableView.filters).map(
-                        ([column, filterValues]) => (
-                          <div
-                            key={column}
-                            className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                          >
-                            <span className="text-sm font-medium text-gray-900">
-                              {column}
-                            </span>
-                            <span className="text-sm text-gray-600">
-                              {Array.isArray(filterValues)
-                                ? filterValues.join(", ")
-                                : filterValues}
-                            </span>
-                          </div>
-                        )
+                        ([column, filterValues]) => {
+                          console.log("ViewManagementModal render - mapping filter:", column, filterValues);
+                          return (
+                            <div
+                              key={column}
+                              className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                            >
+                              <span className="text-sm font-medium text-gray-900">
+                                {column}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                {Array.isArray(filterValues)
+                                  ? filterValues.join(", ")
+                                  : String(filterValues)}
+                              </span>
+                            </div>
+                          );
+                        }
                       )}
                     </div>
                   ) : (

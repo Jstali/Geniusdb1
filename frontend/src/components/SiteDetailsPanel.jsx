@@ -139,9 +139,9 @@ const SiteDetailsPanel = ({ selectedSite, summaryStats, onClose }) => {
   // Helper function to calculate risk level based on Generation Headroom
   const calculateRiskLevel = (headroom) => {
     if (headroom === null || headroom === undefined)
-      return { label: "Unknown", color: "gray" };
+      return { label: "Unknown", color: "black" };
     const value = parseFloat(headroom);
-    if (isNaN(value)) return { label: "Unknown", color: "gray" };
+    if (isNaN(value)) return { label: "Unknown", color: "black" };
 
     if (value >= 50) return { label: "Low (Green)", color: "green" };
     if (value >= 20) return { label: "Medium (Amber)", color: "amber" };
@@ -257,12 +257,13 @@ const SiteDetailsPanel = ({ selectedSite, summaryStats, onClose }) => {
               <span
                 className={`font-semibold ${
                   riskLevel.color === "green"
-                    ? "text-geniusAquamarine"
-                    : riskLevel.color === "amber"
-                    ? "text-amber-600"
-                    : riskLevel.color === "red"
-                    ? "text-red-600"
-                    : "text-gray-600"
+                  ? "text-green-600"
+                  : riskLevel.color === "amber"
+                  ? "text-amber-600"
+                  : riskLevel.color === "red"
+                  ? "text-red-600"
+                  : "text-green-600"
+                  
                 }`}
               >
                 {riskLevel.label}

@@ -1,0 +1,25 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - genius
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 149.102.158.71
+          username: pradeep1a
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd /home/pradeep1a/Geniusdb1
+            git pull origin genius
+            docker-compose down
+            docker-compose up -d --build
+            echo "Deployment completed at $(date)"

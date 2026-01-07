@@ -48,6 +48,9 @@ const DataTable = ({
   showFullSites = false, // Add this prop for site filtering toggle
   onToggleFullSites = () => {}, // Add this prop to handle site filtering toggle
 }) => {
+  // Stringify initialFilters for stable dependency
+  const initialFiltersKey = JSON.stringify(initialFilters || {});
+  
   // Initialize all hooks first to maintain consistent order
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -64,6 +67,55 @@ const DataTable = ({
   const [showColumnToggle, setShowColumnToggle] = useState(false);
   const showColumnToggleRef = useRef(false);
   const isManuallyToggling = useRef(false); // Track when user is manually toggling columns
+  
+  // Track if we're applying initial filters (to prevent circular updates)
+  const isApplyingInitialFilters = useRef(false);
+  const lastAppliedFiltersRef = useRef("");
+  
+  // Apply initialFilters whenever they change
+  useEffect(() => {
+    console.log("=== DataTable Filter useEffect ===");
+    console.log("initialFiltersKey:", initialFiltersKey);
+    console.log("lastAppliedFiltersRef.current:", lastAppliedFiltersRef.current);
+    console.log("Are they equal?", lastAppliedFiltersRef.current === initialFiltersKey);
+    
+    // Only apply if filters actually changed
+    if (lastAppliedFiltersRef.current === initialFiltersKey) {
+      console.log("DataTable: SKIPPING - filters unchanged");
+      return;
+    }
+    
+    console.log("DataTable: APPLYING filters (they changed)");
+    isApplyingInitialFilters.current = true;
+    lastAppliedFiltersRef.current = initialFiltersKey;
+    const parsedFilters = JSON.parse(initialFiltersKey);
+    
+    if (!parsedFilters || Object.keys(parsedFilters).length === 0) {
+      console.log("DataTable: Filters are empty, clearing columnFilters");
+      setColumnFilters([]);
+      setColumnMultiSelectValues({});
+      // Allow user filters to propagate after a short delay
+      setTimeout(() => { isApplyingInitialFilters.current = false; }, 100);
+      return;
+    }
+    
+    console.log("DataTable: Filters are NOT empty, applying:", parsedFilters);
+    
+    const newColumnFilters = Object.entries(parsedFilters)
+      .filter(([key, val]) => key !== "_global" && val && val.length > 0)
+      .map(([id, value]) => ({ id, value }));
+    
+    const newMultiSelectValues = Object.entries(parsedFilters)
+      .filter(([key, val]) => key !== "_global" && val && val.length > 0)
+      .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
+    
+    console.log("DataTable: Setting columnFilters to:", newColumnFilters);
+    console.log("DataTable: Setting columnMultiSelectValues to:", newMultiSelectValues);
+    setColumnFilters(newColumnFilters);
+    setColumnMultiSelectValues(newMultiSelectValues);
+    
+    setTimeout(() => { isApplyingInitialFilters.current = false; }, 200);
+  }, [initialFiltersKey]);
 
   // Site filtering logic - filter data based on showFullSites prop
   const filteredData = useMemo(() => {
@@ -98,9 +150,7 @@ const DataTable = ({
   const tableRef = useRef(null);
   const dropdownRefs = useRef({});
   const columnToggleRef = useRef(null);
-  const initialFiltersApplied = useRef(false);
   const initialPaginationApplied = useRef(false);
-  const lastInitialFilters = useRef(null); // Track the last applied initialFilters
 
   // Debugging logs
   console.log("DataTable: Component called with props", {
@@ -464,61 +514,6 @@ const DataTable = ({
     }
   }, [table, onFilteredDataChange, filteredData.length, columnFilters, globalFilter, sorting, columnVisibility, showFullSites]);
 
-  // Stringify initialFilters for dependency comparison
-  const initialFiltersKey = JSON.stringify(initialFilters);
-  
-  // Apply initial filters only once when component mounts
-  useEffect(() => {
-    // Skip if already applied
-    if (initialFiltersApplied.current) {
-      return;
-    }
-    
-    // Wait for columns to be available
-    if (!columns || columns.length === 0) {
-      return;
-    }
-    
-    // Skip if no initial filters
-    if (!initialFilters || Object.keys(initialFilters).length === 0) {
-      initialFiltersApplied.current = true;
-      return;
-    }
-    
-    console.log("DataTable: Applying initial filters", initialFilters);
-    
-    const newColumnFilters = [];
-    
-    Object.entries(initialFilters).forEach(([columnId, filterValues]) => {
-      if (columnId === "_global" || !filterValues || filterValues.length === 0) {
-        return;
-      }
-      
-      const matchingColumn = columns.find(col => 
-        col.accessorKey === columnId || 
-        col.accessorKey?.toLowerCase() === columnId.toLowerCase()
-      );
-      
-      const actualColumnId = matchingColumn ? matchingColumn.accessorKey : columnId;
-      
-      newColumnFilters.push({
-        id: actualColumnId,
-        value: filterValues
-      });
-    });
-    
-    setColumnFilters(newColumnFilters);
-    
-    const newMultiSelectValues = {};
-    newColumnFilters.forEach(filter => {
-      newMultiSelectValues[filter.id] = filter.value;
-    });
-    setColumnMultiSelectValues(newMultiSelectValues);
-    
-    initialFiltersApplied.current = true;
-    
-  }, [initialFiltersKey, columns.length]);
-
   // Apply initial sort configuration
   useEffect(() => {
     if (initialSortConfig && initialSortConfig.sortBy && initialSortConfig.sortBy.length > 0) {
@@ -594,9 +589,19 @@ const DataTable = ({
     globalFilter: ""
   });
 
-  // Notify parent component when filters change
+  // Store onFiltersChange in a ref to avoid dependency issues
+  const onFiltersChangeRef = useRef(onFiltersChange);
+  onFiltersChangeRef.current = onFiltersChange;
+
+  // Notify parent component when filters change (but not when applying initial filters)
   useEffect(() => {
-    if (onFiltersChange) {
+    // Skip notifying parent when we're applying initial filters to prevent circular updates
+    if (isApplyingInitialFilters.current) {
+      console.log("DataTable: Skipping onFiltersChange - applying initial filters");
+      return;
+    }
+    
+    if (onFiltersChangeRef.current) {
       // Convert columnFilters to a more readable format
       const filters = {};
       columnFilters.forEach(filter => {
@@ -610,23 +615,17 @@ const DataTable = ({
         filters._global = globalFilter;
       }
       
-      console.log("DataTable: Notifying parent of filter changes", {
-        columnFilters: filters,
-        globalFilter
-      });
-      onFiltersChange(filters);
+      console.log("DataTable: Notifying parent of filter changes", filters);
+      onFiltersChangeRef.current(filters);
     }
-  }, [columnFilters, globalFilter, onFiltersChange]);
+  }, [columnFilters, globalFilter]);
 
-  // Track when user applies filters (not from initial filters)
+  // Track when user applies filters
   useEffect(() => {
-    // Only update userAppliedFilters if we're not in the initial filter application phase
-    if (initialFiltersApplied.current) {
-      setUserAppliedFilters({
-        columnFilters: columnFilters,
-        globalFilter: globalFilter
-      });
-    }
+    setUserAppliedFilters({
+      columnFilters: columnFilters,
+      globalFilter: globalFilter
+    });
   }, [columnFilters, globalFilter]);
 
   // Check if user has applied any filters (excluding global search)

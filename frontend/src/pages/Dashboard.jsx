@@ -243,8 +243,22 @@ const Dashboard = () => {
       console.log("Map view config updated:", viewConfig.mapView);
     }
 
+    // Save active view to localStorage for persistence across reloads
+    if (viewConfig.viewName) {
+      localStorage.setItem("activeView", viewConfig.viewName);
+    }
+
     console.log("=== Dashboard: handleViewLoad completed ===");
   };
+
+  // Auto-load saved view on mount
+  useEffect(() => {
+    const savedActiveView = localStorage.getItem("activeView");
+    if (savedActiveView) {
+      console.log("Auto-loading saved view on mount:", savedActiveView);
+      handleLoadSavedView(savedActiveView);
+    }
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {

@@ -393,17 +393,17 @@ const HomePage = ({
           </div>
         ) : (
         <DataTable
-          data={data} // Pass full dataset to table
+          data={data}
           columns={columns}
-          selectedColumns={tableViewConfig?.selectedColumns || []} // Pass empty array when no columns selected
+          selectedColumns={tableViewConfig?.selectedColumns || []}
           onSelectedColumnsChange={handleSelectedColumnsChange}
-          onFilteredDataChange={handleFilteredDataChange} // Pass handler for filtered data changes
-          onFiltersChange={handleFiltersChange} // Pass handler for filter changes
-          initialFilters={tableViewConfig?.filters || {}} // Pass initial filters from saved view
-          initialSortConfig={tableViewConfig?.sortBy ? { sortBy: tableViewConfig.sortBy, sortDirection: tableViewConfig.sortDirection } : null} // Pass initial sort config
-          initialPaginationConfig={tableViewConfig?.pageSize ? { pageSize: tableViewConfig.pageSize, currentPage: tableViewConfig.currentPage } : null} // Pass initial pagination config
-          showFullSites={showFullSites} // Pass site filtering state
-          onToggleFullSites={() => setShowFullSites(!showFullSites)} // Pass toggle handler
+          onFilteredDataChange={handleFilteredDataChange}
+          onFiltersChange={handleFiltersChange}
+          initialFilters={tableViewConfig?.filters || {}}
+          initialSortConfig={tableViewConfig?.sortBy ? { sortBy: tableViewConfig.sortBy, sortDirection: tableViewConfig.sortDirection } : null}
+          initialPaginationConfig={tableViewConfig?.pageSize ? { pageSize: tableViewConfig.pageSize, currentPage: tableViewConfig.currentPage } : null}
+          showFullSites={showFullSites}
+          onToggleFullSites={() => setShowFullSites(!showFullSites)}
         />
         )}
       </div>

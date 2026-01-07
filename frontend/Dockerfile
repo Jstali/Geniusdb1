@@ -4,6 +4,9 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Install build dependencies for native modules (canvas)
+RUN apk add --no-cache python3 make g++ pkgconfig pixman-dev cairo-dev pango-dev libjpeg-turbo-dev giflib-dev
+
 # Copy package files
 COPY package*.json ./
 

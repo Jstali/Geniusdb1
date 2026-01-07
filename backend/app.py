@@ -59,7 +59,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 def init_database():
     """Initialize the user_views database with enhanced schema"""
     try:
-        conn = sqlite3.connect("user_views.db")
+        conn = sqlite3.connect("/app/db/user_views.db")
         cursor = conn.cursor()
         
         # Create user_views table with enhanced schema
@@ -405,7 +405,7 @@ def get_chart_data(request: ChartDataRequest):
 def get_user_views(user_id: int = Query(1)):
     """Get all saved views for a user (max 5)"""
     try:
-        conn = sqlite3.connect("user_views.db")
+        conn = sqlite3.connect("/app/db/user_views.db")
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -447,7 +447,7 @@ def get_user_view(slot: int, user_id: int = Query(1)):
         if slot < 1 or slot > 5:
             return {"error": "Slot must be between 1 and 5"}, 400
             
-        conn = sqlite3.connect("user_views.db")
+        conn = sqlite3.connect("/app/db/user_views.db")
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -517,7 +517,7 @@ def save_user_view(
             except Exception:
                 return {"error": "Invalid filters format"}, 400
             
-        conn = sqlite3.connect("user_views.db")
+        conn = sqlite3.connect("/app/db/user_views.db")
         cursor = conn.cursor()
         
         # Check if a view already exists in this slot for this user
@@ -571,7 +571,7 @@ def delete_user_view(slot: int, user_id: int = Query(1)):
         if slot < 1 or slot > 5:
             return {"error": "Slot must be between 1 and 5"}, 400
             
-        conn = sqlite3.connect("user_views.db")
+        conn = sqlite3.connect("/app/db/user_views.db")
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -608,7 +608,7 @@ def save_update_view(view_name: str, view_data: NewViewData):
         # Convert selected columns to comma-separated string
         selected_columns_str = ",".join(view_data.selected_columns)
         
-        conn = sqlite3.connect("user_views.db")
+        conn = sqlite3.connect("/app/db/user_views.db")
         cursor = conn.cursor()
         
         # Check if a view already exists with this name for this user
@@ -655,7 +655,7 @@ def load_view_data(view_name: str, user_id: int = Query(...)):
             return {"error": "View name must be one of: View 1, View 2, View 3, View 4, View 5"}, 400
             
         # Fetch saved view from DB
-        conn = sqlite3.connect("user_views.db")
+        conn = sqlite3.connect("/app/db/user_views.db")
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -725,7 +725,7 @@ def get_map_view(view_name: str, user_id: int = Query(...)):
             return {"error": "View name must be one of: View 1, View 2, View 3, View 4, View 5"}, 400
             
         # Fetch saved view from DB
-        conn = sqlite3.connect("user_views.db")
+        conn = sqlite3.connect("/app/db/user_views.db")
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         

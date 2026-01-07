@@ -51,6 +51,8 @@ services:
       - ./backend/data:/app/data:ro
       # Mount for uploaded files (if any)
       - backend_uploads:/app/uploads
+      # Mount for SQLite database persistence
+      - ./backend:/app/db
     ports:
       - "5801:8000"
     depends_on:

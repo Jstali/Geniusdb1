@@ -57,6 +57,7 @@ const SavedViewsDropdown = ({ onLoadView }) => {
       setLoading(true);
       setIsOpen(false);
 
+      console.log("=== SavedViewsDropdown: Loading view ===", view);
       const response = await fetch(`${API_BASE}/api/user/views/${view.slot}`);
 
       if (!response.ok) {
@@ -64,6 +65,7 @@ const SavedViewsDropdown = ({ onLoadView }) => {
       }
 
       const data = await response.json();
+      console.log("SavedViewsDropdown: API response:", data);
 
       if (data.error) {
         setError(data.error);
@@ -72,6 +74,8 @@ const SavedViewsDropdown = ({ onLoadView }) => {
 
       // Parse all saved configurations
       const savedFilters = data.filters ? JSON.parse(data.filters) : {};
+      console.log("SavedViewsDropdown: Parsed filters:", savedFilters);
+      
       const savedChartConfig = data.chart_config
         ? JSON.parse(data.chart_config)
         : { type: "bar", xAxis: "", yAxis: "" };
@@ -102,6 +106,8 @@ const SavedViewsDropdown = ({ onLoadView }) => {
         viewName: view.name || `View ${view.slot}`, // Add view name to config
       };
 
+      console.log("SavedViewsDropdown: Calling onLoadView with:", viewConfig);
+      console.log("SavedViewsDropdown: filters being passed:", viewConfig.tableView.filters);
       onLoadView(viewConfig);
 
       // Show success notification
